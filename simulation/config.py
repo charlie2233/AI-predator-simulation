@@ -93,16 +93,16 @@ SPECIES_DNA_RANGES = {
 
 # Visual identity
 SPECIES_STYLE = {
-    'grazer': {'color': (60, 200, 80), 'shape': 'circle'},
-    'hunter': {'color': (220, 70, 70), 'shape': 'triangle'},
-    'scavenger': {'color': (170, 120, 70), 'shape': 'square'},
-    'protector': {'color': (70, 140, 230), 'shape': 'diamond'},
-    'parasite': {'color': (200, 70, 200), 'shape': 'hex'},
+    'grazer': {'color': (140, 225, 160), 'shape': 'circle'},
+    'hunter': {'color': (245, 145, 145), 'shape': 'triangle'},
+    'scavenger': {'color': (215, 180, 150), 'shape': 'square'},
+    'protector': {'color': (160, 195, 255), 'shape': 'diamond'},
+    'parasite': {'color': (220, 150, 245), 'shape': 'hex'},
 }
 CLAN_ACCENTS = [
     (255, 255, 255),
-    (200, 200, 255),
-    (255, 220, 200),
+    (210, 235, 255),
+    (255, 230, 210),
 ]
 
 # Food settings

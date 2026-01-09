@@ -179,16 +179,20 @@ class World:
             if random.random() < prob:
                 self._apply_event(event_type)
 
-    def _apply_event(self, event_type: str):
+    def _apply_event(self, event_type: str, center: Tuple[float, float] = None, radius: float = None):
         severity = EVENT_SEVERITY.get(event_type, 1.0)
         max_casualties = {sp: max(1, int(len(agents) * MAX_EVENT_CASUALTY_FRACTION)) for sp, agents in self.populations.items()}
         casualties = {sp: 0 for sp in self.populations.keys()}
         shelters = self.shelters
+        radius = radius or max(self.width, self.height)  # global if none
 
         for species, agents in self.populations.items():
             for agent in agents:
                 if casualties[species] >= max_casualties[species]:
                     continue
+                if center:
+                    if agent.distance_to(center) > radius:
+                        continue
                 sheltered = any(agent.distance_to(sh) < sh.radius for sh in shelters)
                 if sheltered:
                     continue
@@ -199,7 +203,8 @@ class World:
                     agent.alive = False
                     casualties[species] += 1
 
-        self.extinction_log.append(f"Gen {self.generation} event: {event_type} (sev {severity:.1f})")
+        loc_text = f" at {center}" if center else ""
+        self.extinction_log.append(f"Gen {self.generation} event: {event_type}{loc_text} (sev {severity:.1f})")
 
     def build_shelter(self, rock: Rock, builder=None):
         """Convert rock into shelter."""
@@ -209,6 +214,10 @@ class World:
         self.shelters.append(Shelter(rock.x, rock.y, radius=SHELTER_RADIUS))
         name = builder.species if builder else "agent"
         self.extinction_log.append(f"Gen {self.generation}: {name} built shelter")
+
+    def apply_manual_event(self, event_type: str, position: Tuple[float, float], radius: float = 140):
+        """Trigger a targeted event at a world position."""
+        self._apply_event(event_type, center=position, radius=radius)
 
     def end_episode(self):
         """Compute fitness, evolve populations, log stats."""

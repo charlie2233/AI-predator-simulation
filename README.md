@@ -104,6 +104,7 @@ python -m simulation.main
 - **Episode Length / Mutation σ / Food Spawn**: Tune evolution and resource pacing
 - **Toggle Obstacles**: Spawn/clear simple avoidance obstacles
 - **Buttons**: Start, Pause/Resume, Reset Generation, Reset All, Export Stats, Next Trait
+- **Manual Events**: Arm Earthquake / Tsunami / Meteor then click on the world to drop it
 
 ## How It Works
 

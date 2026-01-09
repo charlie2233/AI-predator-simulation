@@ -52,6 +52,7 @@ python generate_screenshot.py output.png 200
 - **Initial Populations**: Numeric inputs per species (applies on reset)
 - **World Size**: Width/height inputs (applies on reset)
 - **Buttons**: Pause/Resume, Reset Generation, Reset All, Export Stats (CSV/JSON), Toggle Obstacles, Next Trait
+- **Manual Events**: Arm Earthquake/Tsunami/Meteor and click on the world to trigger at that spot
 
 ## Understanding the Simulation
 

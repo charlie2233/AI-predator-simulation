@@ -1,5 +1,6 @@
 """
 Main simulation runner with pygame interface and a front menu scene.
+Includes manual event injection via the control panel.
 """
 import os
 import pygame
@@ -46,6 +47,7 @@ class Simulation:
         self.scene = "menu"  # menu | play
         self.show_credits = False
         self.update_counter = 0
+        self.pending_event_type = None
 
         cx = WORLD_WIDTH // 2 - 90
         cy = WORLD_HEIGHT // 2
@@ -70,6 +72,8 @@ class Simulation:
                     self.paused = not self.paused
                 elif event.key == pygame.K_r and self.scene == "play":
                     self.world.reset_generation()
+            elif event.type == pygame.MOUSEBUTTONDOWN and self.scene == "play":
+                self._handle_world_click(event)
 
             if self.scene == "menu":
                 self._handle_menu_event(event)
@@ -86,6 +90,16 @@ class Simulation:
                 if actions.get("trait_changed"):
                     self.trait_graph.title = self._current_trait_title()
                     self.trait_graph.update(self.world.populations.get("grazer", []), self._current_trait())
+                if actions.get("event_armed"):
+                    self.pending_event_type = actions["event_armed"]
+                    self.log_panel.push(f"Armed {self.pending_event_type}. Click world to trigger.")
+
+    def _handle_world_click(self, event):
+        x, y = event.pos
+        if x <= WORLD_WIDTH and y <= WORLD_HEIGHT and self.pending_event_type:
+            self.world.apply_manual_event(self.pending_event_type, (x, y))
+            self.log_panel.push(f"Manual event {self.pending_event_type} at ({x}, {y})")
+            self.pending_event_type = None
 
     def update(self):
         if self.scene != "play":
@@ -127,6 +141,8 @@ class Simulation:
 
         if self.scene == "menu":
             self._draw_menu()
+        elif self.pending_event_type:
+            self._draw_event_overlay()
 
         fps_font = pygame.font.Font(None, 20)
         fps_text = fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, WHITE)
@@ -216,6 +232,14 @@ class Simulation:
             for i, line in enumerate(credits):
                 txt = text_font.render(line, True, WHITE)
                 overlay.blit(txt, (WORLD_WIDTH // 2 - txt.get_width() // 2, WORLD_HEIGHT // 2 + 120 + i * 22))
+        self.screen.blit(overlay, (0, 0))
+
+    def _draw_event_overlay(self):
+        overlay = pygame.Surface((WORLD_WIDTH, 40), pygame.SRCALPHA)
+        overlay.fill((20, 20, 20, 180))
+        font = pygame.font.Font(None, 24)
+        msg = font.render(f"Armed event: {self.pending_event_type} — click on the world to trigger", True, WHITE)
+        overlay.blit(msg, (10, 10))
         self.screen.blit(overlay, (0, 0))
 
 

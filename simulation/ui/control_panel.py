@@ -42,6 +42,7 @@ class ControlPanel:
         self.sliders = {}
         self.labels = {}
         self.inputs = {}
+        self.event_selection = None
 
         # Cached values for resets
         self.initial_counts = dict(INITIAL_SPECIES_COUNTS)
@@ -104,6 +105,17 @@ class ControlPanel:
         self.buttons["trait_cycle"] = Button(x, y, UI_BUTTON_WIDTH + 40, UI_BUTTON_HEIGHT, "Next Trait", DARK_GRAY)
         y += UI_BUTTON_HEIGHT + UI_PADDING
 
+        # Event injection
+        self.labels["event_title"] = Label(x, y, "Manual Events", WHITE, UI_FONT_SIZE)
+        y += 22
+        self.buttons["ev_quake"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Arm Earthquake", DARK_GRAY)
+        y += UI_BUTTON_HEIGHT + UI_PADDING
+        self.buttons["ev_tsunami"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Arm Tsunami", DARK_GRAY)
+        y += UI_BUTTON_HEIGHT + UI_PADDING
+        self.buttons["ev_meteor"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Arm Meteor", DARK_GRAY)
+        y += UI_BUTTON_HEIGHT + UI_PADDING
+        self.labels["event_hint"] = Label(x, y, "Click world to drop event", WHITE)
+
         # Stats labels
         self.labels["stats_title"] = Label(x, y, "Live Stats", WHITE, UI_FONT_SIZE)
         y += 22
@@ -136,6 +148,15 @@ class ControlPanel:
         if self.buttons["obstacles"].handle_event(event):
             self.obstacles_enabled = not self.obstacles_enabled
             actions["obstacles_toggled"] = True
+        if self.buttons["ev_quake"].handle_event(event):
+            self.event_selection = "earthquake"
+            actions["event_armed"] = "earthquake"
+        if self.buttons["ev_tsunami"].handle_event(event):
+            self.event_selection = "tsunami"
+            actions["event_armed"] = "tsunami"
+        if self.buttons["ev_meteor"].handle_event(event):
+            self.event_selection = "meteor"
+            actions["event_armed"] = "meteor"
 
         for slider in self.sliders.values():
             slider.handle_event(event)
@@ -154,6 +175,10 @@ class ControlPanel:
         for species, lbl in self.labels["populations"].items():
             lbl.set_text(f"{species.title()}: {len(world.populations.get(species, []))}")
         self.labels["food_count"].set_text(f"Food: {len(world.food)}")
+        if self.event_selection:
+            self.labels["event_hint"].set_text(f"Armed: {self.event_selection} (click world)")
+        else:
+            self.labels["event_hint"].set_text("Click world to drop event")
 
     def draw(self, surface):
         if not self.font:
