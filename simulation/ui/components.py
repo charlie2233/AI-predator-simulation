@@ -7,6 +7,7 @@ from simulation.config import (
     UI_PADDING, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT,
     UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, UI_FONT_SIZE
 )
+import pygame.locals as pl
 
 
 class Button:
@@ -199,3 +200,47 @@ class Label:
         """
         text_surface = font.render(str(self.text), True, self.color)
         surface.blit(text_surface, (self.x, self.y))
+
+
+class NumericInput:
+    """Simple numeric input box."""
+
+    def __init__(self, x, y, width, height, value, label="", min_val=0, max_val=9999):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.value = value
+        self.label = label
+        self.active = False
+        self.min_val = min_val
+        self.max_val = max_val
+        self.text = str(value)
+
+    def handle_event(self, event):
+        if event.type == pl.MOUSEBUTTONDOWN:
+            self.active = self.rect.collidepoint(event.pos)
+        if self.active and event.type == pl.KEYDOWN:
+            if event.key == pl.K_RETURN:
+                self._commit()
+                self.active = False
+            elif event.key == pl.K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif event.unicode.isdigit():
+                self.text += event.unicode
+
+    def _commit(self):
+        try:
+            num = int(self.text)
+            num = max(self.min_val, min(self.max_val, num))
+            self.value = num
+        except ValueError:
+            self.text = str(self.value)
+
+    def draw(self, surface, font):
+        if self.active:
+            pygame.draw.rect(surface, LIGHT_GRAY, self.rect)
+        else:
+            pygame.draw.rect(surface, DARK_GRAY, self.rect)
+        pygame.draw.rect(surface, WHITE, self.rect, 2)
+        label_surface = font.render(f"{self.label}: {self.value}", True, WHITE)
+        surface.blit(label_surface, (self.rect.x, self.rect.y - 18))
+        text_surface = font.render(self.text, True, WHITE)
+        surface.blit(text_surface, (self.rect.x + 4, self.rect.y + 4))

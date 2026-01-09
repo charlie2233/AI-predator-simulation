@@ -53,7 +53,8 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
     
     population_graph = PopulationGraph(
         WORLD_WIDTH + 10, 420,
-        STATS_PANEL_WIDTH - 20, 150
+        STATS_PANEL_WIDTH - 20, 150,
+        species_names=list(world.populations.keys())
     )
     
     trait_graph = TraitGraph(
@@ -70,7 +71,7 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
         if i % 10 == 0:
             population_graph.update(world)
             trait_graph.title = trait_title(current_trait)
-            trait_graph.update(world.prey, current_trait)
+            trait_graph.update(world.populations.get('grazer', []), current_trait)
     
     control_panel.update(world)
     
@@ -82,10 +83,12 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
     # Draw all entities
     for food in world.food:
         food.draw(world_surface)
-    for prey in world.prey:
-        prey.draw(world_surface)
-    for predator in world.predators:
-        predator.draw(world_surface)
+    for rock in world.rocks:
+        rock.draw(world_surface)
+    for shelter in world.shelters:
+        shelter.draw(world_surface)
+    for agent in world.get_all_agents():
+        agent.draw(world_surface)
     
     # Blit to screen
     screen.blit(world_surface, (0, 0))
@@ -98,7 +101,7 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
     
     # Add title
     font = pygame.font.Font(None, 24)
-    title = font.render("AI Predator-Prey Simulation", True, WHITE)
+    title = font.render("AI Evolving Animals Sandbox", True, WHITE)
     screen.blit(title, (10, 10))
     
     # Save screenshot
@@ -107,8 +110,8 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
     
     # Print stats
     print(f"\nSimulation state at {steps} steps:")
-    print(f"  Prey: {len(world.prey)}")
-    print(f"  Predators: {len(world.predators)}")
+    print(f"  Grazer: {len(world.populations.get('grazer', []))}")
+    print(f"  Hunter: {len(world.populations.get('hunter', []))}")
     print(f"  Food: {len(world.food)}")
     
     pygame.quit()

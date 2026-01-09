@@ -5,29 +5,27 @@ An advanced 2D multi-agent simulation featuring evolutionary dynamics, multiple 
 ## Features
 
 ### 🧬 Evolution System
-- **Genetic Traits**: Each agent has unique genes controlling:
-  - Speed (movement velocity)
-  - Vision range (perception distance)
-  - Energy efficiency (metabolism)
-  - Size (physical dimensions)
-- **Natural Selection**: Successful agents reproduce, passing traits to offspring
-- **Mutation**: Random genetic variations introduce diversity
-- **Crossover**: Sexual reproduction combines parent traits
+- **Episode-based Evolution**: Runs in fixed-length episodes/generations with end-of-episode fitness
+- **Dict DNA**: Numeric genes for speed, vision, energy efficiency, size, and role-specific knobs (stun radius, drain rate, cohesion/dispersion)
+- **Selection + Crossover**: Tournament selection + blended crossover each generation
+- **Mutation**: Gaussian mutation per gene with tunable sigma
+- **Archive Recovery**: Extinction triggers repopulation from archived top-K DNA with higher mutation
 
 ### 🦎 Multiple Species
-- **Herbivores** (Green): Peaceful prey that eat plants
-- **Carnivores** (Red): Aggressive predators that hunt prey
-- **Omnivores** (Yellow/Purple): Flexible species with mixed strategies
+- **Grazer (Prey)**: Eats plants; balances cohesion vs dispersion
+- **Hunter (Predator)**: Chases grazers/scavengers; can be stunned by protectors
+- **Scavenger**: Prefers carcasses; opportunistic hunting
+- **Protector**: Escorts grazers; short-range stun/repel pulse
+- **Parasite**: Attaches to hosts, drains energy, slows them down
 
 ### 🎮 Interactive Control Panel
 - **Play/Pause Controls**: Start, pause, and resume simulation
 - **Speed Slider**: Adjust simulation speed (0.1x to 5x)
-- **Reset Button**: Restart with fresh population
-- **Real-time Statistics**: 
-  - Population counts
-  - Average trait values
-  - Generation tracking
-  - Time steps
+- **Population Inputs**: Set initial pop per species, world size, episode length
+- **Mutation/Food Sliders**: Tune mutation sigma and food respawn rate
+- **Buttons**: Reset Generation, Reset All, Export Stats (CSV/JSON), Toggle Obstacles
+- **Real-time Statistics**: Population counts, generation tracking, time steps
+- **Trait & Event Feed**: Cycle trait histogram, view extinction/recovery/disaster logs
 
 ### 📊 Advanced Visualization
 - **Color-coded Agents**: 
@@ -41,19 +39,25 @@ An advanced 2D multi-agent simulation featuring evolutionary dynamics, multiple 
 ### 🏗️ Modular Architecture
 ```
 simulation/
-├── agents/          # Agent implementations
-│   ├── agent.py     # Base agent class
-│   ├── prey.py      # Prey behavior
-│   ├── predator.py  # Predator behavior
-│   └── food.py      # Food items
+├── agents/          # Base agent + shared items
+│   ├── agent.py     # Base agent class with DNA + metrics
+│   └── food.py      # Food / carcass items
+├── species/         # Species-specific behaviors
+│   ├── grazer.py    # Plant eater
+│   ├── hunter.py    # Predator
+│   ├── scavenger.py # Carrion-loving omnivore
+│   ├── protector.py # Escort + stun
+│   └── parasite.py  # Attachment + drain
 ├── evolution/       # Genetic algorithms
-│   └── genetics.py  # Traits and evolution tracking
+│   ├── dna.py       # Dict-based DNA container
+│   └── evolution.py # Selection, reproduction, archive
 ├── ui/              # User interface
-│   ├── components.py      # UI widgets (buttons, sliders)
-│   ├── control_panel.py   # Control panel
+│   ├── components.py      # UI widgets (buttons, sliders, numeric inputs)
+│   ├── control_panel.py   # Control panel + config overrides
 │   └── visualization.py   # Graphs and charts
+├── stats.py         # Generation logging + export
 ├── config.py        # Configuration settings
-├── world.py         # World environment
+├── world.py         # World environment + generational evolution
 └── main.py          # Main simulation loop
 ```
 
@@ -89,25 +93,31 @@ python -m simulation.main
 
 ### Controls
 - **SPACE**: Pause/Resume simulation
-- **R**: Reset simulation
+- **R**: Reset current generation
 - **ESC**: Quit application
 
 ### UI Controls
+- **Front Menu**: Start Game (new world), Continue (resume current), Credits overlay
 - **Speed Slider**: Drag to adjust simulation speed
-- **Pause Button**: Click to pause/resume
-- **Reset Button**: Click to reset the simulation
-- **Next Trait Button**: Cycle the trait histogram between speed, vision, energy efficiency, and size
+- **Population Inputs**: Set starting population per species (applies on reset)
+- **World Size Inputs**: Adjust width/height (applies on reset)
+- **Episode Length / Mutation σ / Food Spawn**: Tune evolution and resource pacing
+- **Toggle Obstacles**: Spawn/clear simple avoidance obstacles
+- **Buttons**: Start, Pause/Resume, Reset Generation, Reset All, Export Stats, Next Trait
 
 ## How It Works
 
 ### Simulation Mechanics
-1. **Agents** move around the world with inherited traits
-2. **Prey** seek food and flee from predators
-3. **Predators** hunt prey to gain energy
-4. **Energy** depletes over time; agents die if energy reaches zero
-5. **Reproduction** occurs when agents have sufficient energy
-6. **Offspring** inherit traits from parents with mutations
-7. **Energy Costs** scale with agent size and speed, rewarding efficient genetic combinations
+1. **Agents** move around the world with inherited DNA (dict of numeric genes)
+2. **Grazer** seek food and balance cohesion vs dispersion
+3. **Hunters** chase prey; **Protectors** can stun them; **Scavengers** prefer carcasses; **Parasites** attach and drain
+4. **Energy** depletes over time with speed/size trade-offs; eating replenishes energy
+5. **Episodes** run for fixed steps; fitness computed per agent based on role metrics
+6. **Next Generation** is built via tournament selection, crossover, and mutation
+7. **Archive Recovery** repopulates extinct species from top-K DNA with boosted mutation
+8. **World Elements**: Rocks can be turned into shelters (grazers/protectors). Shelters protect from disasters.
+9. **Random Events**: Earthquakes/tsunamis/meteors hit occasionally; damage is capped per species to avoid wipes. Shelters mitigate damage.
+10. **Clans**: Each agent gets a clan accent color for quick grouping within a species.
 
 ### Evolution Process
 1. Agents with better-suited traits survive longer
@@ -116,6 +126,24 @@ python -m simulation.main
 4. Random mutations create trait variations
 5. Natural selection favors advantageous traits
 6. Populations adapt to environmental pressures over generations
+
+### Generations & Evolution
+- Each episode runs for `EPISODE_LENGTH_STEPS` ticks (configurable in the UI).
+- At episode end, every agent receives a role-specific fitness (kills, stuns, attachments, survival time, energy gained).
+- Tournament selection builds the parent pool, crossover blends DNA, mutation perturbs genes (sigma slider in UI).
+- An archive keeps top-K DNA per species; extinction instantly repopulates from the archive with higher mutation.
+- Stats are logged per generation and can be exported to `generation_stats.json` / `.csv` from the UI.
+
+### Adding a New Species
+1. Create a new file in `simulation/species/` inheriting from `simulation.agents.agent.Agent`.
+2. Define its DNA ranges in `SPECIES_DNA_RANGES` (simulation/config.py) and add a color/shape entry in `SPECIES_STYLE`.
+3. Implement `update(self, context)` behavior and a `@staticmethod fitness(agent)` function.
+4. Register the class in `SPECIES_CLASS` inside `simulation/world.py` and set an initial count in `INITIAL_SPECIES_COUNTS`.
+
+### Key Config + UI Controls
+- `EPISODE_LENGTH_STEPS`, `MUTATION_SIGMA`, `FOOD_RESPAWN_RATE`, `INITIAL_SPECIES_COUNTS`, `OBSTACLES_ENABLED` in `config.py`.
+- UI sliders/inputs let you override episode length, mutation sigma, food spawn rate, world size, and per-species starting populations at reset.
+- Buttons: Pause/Resume, Reset Generation, Reset All, Export Stats (CSV/JSON), Trait graph cycle, Toggle obstacles.
 
 ### Configuration
 Edit `simulation/config.py` to customize:

@@ -7,21 +7,24 @@ from simulation.config import FOOD_SIZE, FOOD_ENERGY_VALUE, GREEN
 
 
 class Food:
-    """Food item that prey can consume."""
+    """Food item (plant or carcass)."""
     
-    def __init__(self, x, y):
+    def __init__(self, x, y, energy_value=FOOD_ENERGY_VALUE, is_carcass=False):
         """
         Initialize food item.
         
         Args:
             x: X position
             y: Y position
+            energy_value: Energy to grant
+            is_carcass: Whether this is a carcass drop
         """
         self.x = x
         self.y = y
         self.alive = True
-        self.energy_value = FOOD_ENERGY_VALUE
+        self.energy_value = energy_value
         self.size = FOOD_SIZE
+        self.is_carcass = is_carcass
     
     def draw(self, surface):
         """
@@ -33,5 +36,5 @@ class Food:
         if not self.alive:
             return
         
-        color = (100, 255, 100)
+        color = (150, 255, 150) if not self.is_carcass else (180, 140, 80)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.size)

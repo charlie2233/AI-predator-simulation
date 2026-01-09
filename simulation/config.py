@@ -2,16 +2,32 @@
 Configuration settings for the predator-prey simulation.
 """
 
-# World settings
+# Determinism
+RANDOM_SEED = 42
+
+# World settings (can be overridden from control panel on reset)
 WORLD_WIDTH = 800
 WORLD_HEIGHT = 600
 GRID_SIZE = 10
+OBSTACLES_ENABLED = False
+OBSTACLE_COUNT = 4
+OBSTACLE_RADIUS = 25
+ROCK_COUNT = 35
+ROCK_RESPAWN_RATE = 0.01
+SHELTER_RADIUS = 30
+
+# Episode / evolution
+EPISODE_LENGTH_STEPS = 800
+ARCHIVE_TOP_K = 5
+MUTATION_SIGMA = 0.15
+TOURNAMENT_SIZE = 3
+MAX_EVENT_CASUALTY_FRACTION = 0.3  # cap per species when disasters hit
 
 # Display settings
-WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 700
+WINDOW_WIDTH = 1300
+WINDOW_HEIGHT = 760
 FPS = 60
-STATS_PANEL_WIDTH = 400
+STATS_PANEL_WIDTH = 450
 
 # Colors
 BLACK = (0, 0, 0)
@@ -24,70 +40,88 @@ GRAY = (128, 128, 128)
 DARK_GRAY = (64, 64, 64)
 LIGHT_GRAY = (192, 192, 192)
 
-# Prey settings
-PREY_INITIAL_COUNT = 50
-PREY_SIZE = 4
-PREY_MAX_SPEED = 3.0
-PREY_MIN_SPEED = 1.0
-PREY_VISION_RANGE = 80
-PREY_INITIAL_ENERGY = 100
-PREY_MAX_ENERGY = 150
-PREY_REPRODUCTION_ENERGY = 120
-PREY_REPRODUCTION_COST = 60
-PREY_ENERGY_DECAY = 0.3
+# Species initial counts (overridable via control panel)
+INITIAL_SPECIES_COUNTS = {
+    'grazer': 40,
+    'hunter': 18,
+    'scavenger': 12,
+    'protector': 10,
+    'parasite': 10,
+}
 
-# Predator settings
-PREDATOR_INITIAL_COUNT = 15
-PREDATOR_SIZE = 6
-PREDATOR_MAX_SPEED = 4.0
-PREDATOR_MIN_SPEED = 1.5
-PREDATOR_VISION_RANGE = 120
-PREDATOR_INITIAL_ENERGY = 150
-PREDATOR_MAX_ENERGY = 200
-PREDATOR_REPRODUCTION_ENERGY = 180
-PREDATOR_REPRODUCTION_COST = 80
-PREDATOR_ENERGY_DECAY = 0.5
-PREDATOR_HUNT_ENERGY_GAIN = 50
+# DNA ranges per species (min, max) used for mutation clamping
+SPECIES_DNA_RANGES = {
+    'grazer': {
+        'speed': (0.6, 3.8),
+        'vision': (60, 200),
+        'size': (3, 8),
+        'energy_efficiency': (0.6, 2.2),
+        'cohesion': (0.0, 1.0),
+        'dispersion': (0.0, 1.0),
+    },
+    'hunter': {
+        'speed': (1.2, 4.5),
+        'vision': (80, 240),
+        'size': (4, 9),
+        'energy_efficiency': (0.5, 1.8),
+        'attack_range': (4, 12),
+    },
+    'scavenger': {
+        'speed': (0.8, 3.5),
+        'vision': (80, 220),
+        'size': (3, 7),
+        'energy_efficiency': (0.8, 2.5),
+        'carcass_affinity': (0.5, 2.0),
+    },
+    'protector': {
+        'speed': (0.8, 3.5),
+        'vision': (90, 220),
+        'size': (4, 8),
+        'energy_efficiency': (0.7, 2.0),
+        'stun_radius': (20, 60),
+        'stun_cooldown': (60, 240),
+    },
+    'parasite': {
+        'speed': (1.0, 3.5),
+        'vision': (80, 220),
+        'size': (2, 5),
+        'energy_efficiency': (0.9, 2.5),
+        'drain_rate': (0.4, 2.0),
+        'attach_time': (80, 200),
+    },
+}
+
+# Visual identity
+SPECIES_STYLE = {
+    'grazer': {'color': (60, 200, 80), 'shape': 'circle'},
+    'hunter': {'color': (220, 70, 70), 'shape': 'triangle'},
+    'scavenger': {'color': (170, 120, 70), 'shape': 'square'},
+    'protector': {'color': (70, 140, 230), 'shape': 'diamond'},
+    'parasite': {'color': (200, 70, 200), 'shape': 'hex'},
+}
+CLAN_ACCENTS = [
+    (255, 255, 255),
+    (200, 200, 255),
+    (255, 220, 200),
+]
 
 # Food settings
-FOOD_COUNT = 80
+FOOD_COUNT = 90
 FOOD_SIZE = 3
 FOOD_ENERGY_VALUE = 30
-FOOD_RESPAWN_RATE = 0.02  # Probability per frame
+FOOD_RESPAWN_RATE = 0.025  # Probability per frame
+CARCASS_ENERGY_VALUE = 50
 
-# Evolution settings
-MUTATION_RATE = 0.1  # Probability of mutation per trait (0.0-1.0)
-MUTATION_STRENGTH = 0.15  # Standard deviation of mutation as fraction of current value (0.0-1.0)
-TRAIT_MIN_VALUES = {
-    'speed': 0.5,
-    'vision': 20,
-    'energy_efficiency': 0.5,
-    'size': 2
+# Random events (per-step probability per type)
+EVENT_PROBABILITIES = {
+    'earthquake': 0.0008,
+    'tsunami': 0.0005,
+    'meteor': 0.0006,
 }
-TRAIT_MAX_VALUES = {
-    'speed': 8.0,
-    'vision': 200,
-    'energy_efficiency': 2.0,
-    'size': 10
-}
-
-# Species types
-SPECIES_TYPES = {
-    'herbivore': {
-        'color': (50, 200, 50),
-        'diet': 'plants',
-        'base_speed': 2.5
-    },
-    'carnivore': {
-        'color': (200, 50, 50),
-        'diet': 'meat',
-        'base_speed': 3.5
-    },
-    'omnivore': {
-        'color': (200, 200, 50),
-        'diet': 'both',
-        'base_speed': 3.0
-    }
+EVENT_SEVERITY = {
+    'earthquake': 0.8,
+    'tsunami': 1.0,
+    'meteor': 1.3,
 }
 
 # UI settings

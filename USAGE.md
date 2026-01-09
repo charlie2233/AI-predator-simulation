@@ -23,11 +23,11 @@ python -m simulation.main
 
 ### 3. Run Headless Tests
 ```bash
-# Test without GUI (useful for servers/CI)
+# Test without GUI (useful for servers/CI) - runs a few generations
 python test_headless.py
 
-# Run for specific number of steps
-python test_headless.py 1000
+# Run for N generations
+python test_headless.py 8
 ```
 
 ### 4. Generate Screenshots
@@ -40,23 +40,32 @@ python generate_screenshot.py output.png 200
 
 ### Keyboard Shortcuts
 - **SPACE** - Pause/Resume the simulation
-- **R** - Reset to initial state
+- **R** - Reset current generation
 - **ESC** - Quit the application
 
-### Mouse Controls
-- **Click** Pause/Reset buttons in the control panel
-- **Drag** the Speed slider to adjust simulation speed (0.1x to 5.0x)
-- **Click** Next Trait to cycle the trait histogram (speed, vision, energy efficiency, size)
+### Mouse Controls / Panel
+- **Front Menu**: Start Game (new world), Continue (resume current run), Credits overlay
+- **Speed**: Drag the speed slider (0.1x to 5.0x)
+- **Episode Length**: Set steps per generation (applies on reset)
+- **Mutation σ**: Tune mutation strength
+- **Food Spawn**: Adjust food respawn probability
+- **Initial Populations**: Numeric inputs per species (applies on reset)
+- **World Size**: Width/height inputs (applies on reset)
+- **Buttons**: Pause/Resume, Reset Generation, Reset All, Export Stats (CSV/JSON), Toggle Obstacles, Next Trait
 
 ## Understanding the Simulation
 
 ### Visual Elements
 
 #### Agents
-- **Green circles** - Herbivore prey
-- **Yellow circles** - Omnivore prey
-- **Red/Purple triangles** - Predators (carnivores/omnivores)
-- **Light green dots** - Food items
+- **Grazer** - Green circles
+- **Hunter** - Red triangles
+- **Scavenger** - Brown squares
+- **Protector** - Blue diamonds
+- **Parasite** - Purple hexes
+- **Light green/brown dots** - Food / carcasses
+- **Gray circles/rings** - Rocks and shelters (shelters protect from disasters)
+- **Clan accents** - Slight tints vary per clan within a species
 
 #### Brightness
 - Brighter colors indicate higher energy levels
@@ -65,24 +74,18 @@ python generate_screenshot.py output.png 200
 ### Control Panel
 
 #### Statistics Section
-- **Prey** - Current number of prey agents
-- **Predators** - Current number of predators
-- **Food** - Current number of food items
-- **Time** - Number of simulation steps elapsed
-
-#### Evolution Section
-- **Prey Speed** - Average speed trait of all prey
-- **Prey Vision** - Average vision range of all prey
-- **Pred Speed** - Average speed trait of all predators
-- **Pred Vision** - Average vision range of all predators
+- **Generation / Step** - Current generation and episode step
+- **Populations** - Per-species counts
+- **Food** - Current food items
+- **Trait Graph** - Select trait to visualize for grazers
 
 ### Graphs
 
 #### Population History
-Shows real-time population changes:
-- **Green line** - Prey population over time
-- **Red line** - Predator population over time
-- **Yellow line** - Food availability over time
+Shows real-time population changes for all species plus food (color-coded).
+
+#### Events Feed
+- Logs extinction recoveries, shelter builds, and random disasters (earthquake, tsunami, meteor).
 
 #### Trait Distribution
 Shows histogram of genetic trait values:
@@ -94,29 +97,18 @@ Shows histogram of genetic trait values:
 ### Basic Customization
 Edit `simulation/config.py` to customize:
 
-```python
-# Population sizes
-PREY_INITIAL_COUNT = 50        # Starting prey
-PREDATOR_INITIAL_COUNT = 15    # Starting predators
-FOOD_COUNT = 80                # Number of food items
-
-# Evolution parameters
-MUTATION_RATE = 0.1            # Probability of trait mutation
-MUTATION_STRENGTH = 0.15       # How much traits can change
-
-# Energy settings
-PREY_INITIAL_ENERGY = 100
-PREDATOR_INITIAL_ENERGY = 150
-PREY_MAX_ENERGY = 150
-PREDATOR_MAX_ENERGY = 200
-
-# Reproduction
-PREY_REPRODUCTION_ENERGY = 120      # Energy needed to reproduce
-PREDATOR_REPRODUCTION_ENERGY = 180
-```
+- `INITIAL_SPECIES_COUNTS` - starting populations
+- `EPISODE_LENGTH_STEPS` - steps per generation
+- `MUTATION_SIGMA` - mutation strength
+- `FOOD_RESPAWN_RATE`, `FOOD_COUNT` - resource pacing
+- `SPECIES_DNA_RANGES` - DNA limits per species
+- `OBSTACLES_ENABLED`, `OBSTACLE_COUNT`, `OBSTACLE_RADIUS` - optional obstacles
+- `ROCK_COUNT`, `ROCK_RESPAWN_RATE`, `SHELTER_RADIUS` - shelter resources and size
+- `EVENT_PROBABILITIES`, `EVENT_SEVERITY`, `MAX_EVENT_CASUALTY_FRACTION` - disaster tuning
 
 ### Advanced Configuration
-See `config_example.py` for more examples of customizations.
+- Add/adjust species DNA ranges and colors (`SPECIES_DNA_RANGES`, `SPECIES_STYLE`).
+- Tweak archive size (`ARCHIVE_TOP_K`) and selection (`TOURNAMENT_SIZE`) in `config.py`.
 
 ## Observing Evolution
 
