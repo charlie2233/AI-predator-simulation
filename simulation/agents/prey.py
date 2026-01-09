@@ -61,8 +61,7 @@ class Prey(Agent):
         self.reproduction_timer += 1
         
         # Energy decay based on traits
-        energy_cost = 0.3 / self.traits.energy_efficiency
-        self.energy -= energy_cost
+        self.apply_energy_decay(0.3)
         
         if self.energy <= 0:
             self.alive = False
@@ -160,4 +159,3 @@ class Prey(Agent):
         
         # Draw vision range (for debugging, can be toggled)
         # pygame.draw.circle(surface, (*color, 50), (int(self.x), int(self.y)), int(self.traits.vision), 1)
-

@@ -32,6 +32,8 @@ class ControlPanel:
         self.paused = False
         self.show_vision = False
         self.simulation_speed = 1.0
+        self.trait_options = ['speed', 'vision', 'energy_efficiency', 'size']
+        self.trait_index = 0
         
         # UI elements
         self.buttons = {}
@@ -66,7 +68,16 @@ class ControlPanel:
             x, y, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT,
             0.1, 5.0, 1.0, "Speed"
         )
-        y += UI_SLIDER_HEIGHT + UI_PADDING * 3
+        y += UI_SLIDER_HEIGHT + UI_PADDING * 2
+        
+        # Trait graph selector
+        self.labels['trait_label'] = Label(x, y, self._trait_label_text(), WHITE)
+        y += 20
+        self.buttons['trait_cycle'] = Button(
+            x, y, UI_BUTTON_WIDTH + 40, UI_BUTTON_HEIGHT,
+            "Next Trait", DARK_GRAY
+        )
+        y += UI_BUTTON_HEIGHT + UI_PADDING * 2
         
         # Statistics labels
         self.labels['stats_title'] = Label(x, y, "Statistics", WHITE, UI_FONT_SIZE)
@@ -120,6 +131,11 @@ class ControlPanel:
         if self.buttons['reset'].handle_event(event):
             actions['reset'] = True
         
+        if self.buttons['trait_cycle'].handle_event(event):
+            self.trait_index = (self.trait_index + 1) % len(self.trait_options)
+            self.labels['trait_label'].set_text(self._trait_label_text())
+            actions['trait_changed'] = True
+        
         # Handle sliders
         for slider in self.sliders.values():
             slider.handle_event(event)
@@ -160,6 +176,15 @@ class ControlPanel:
         else:
             self.labels['pred_avg_speed'].set_text("Pred Speed: N/A")
             self.labels['pred_avg_vision'].set_text("Pred Vision: N/A")
+    
+    def get_selected_trait(self):
+        """Return the trait currently selected for the histogram."""
+        return self.trait_options[self.trait_index]
+    
+    def _trait_label_text(self):
+        """Formatted label for the trait selector."""
+        trait_name = self.get_selected_trait().replace('_', ' ').title()
+        return f"Trait Graph: {trait_name}"
     
     def draw(self, surface):
         """

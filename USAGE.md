@@ -46,6 +46,7 @@ python generate_screenshot.py output.png 200
 ### Mouse Controls
 - **Click** Pause/Reset buttons in the control panel
 - **Drag** the Speed slider to adjust simulation speed (0.1x to 5.0x)
+- **Click** Next Trait to cycle the trait histogram (speed, vision, energy efficiency, size)
 
 ## Understanding the Simulation
 

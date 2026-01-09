@@ -58,8 +58,7 @@ class Predator(Agent):
         self.reproduction_timer += 1
         
         # Energy decay (predators use more energy)
-        energy_cost = 0.5 / self.traits.energy_efficiency
-        self.energy -= energy_cost
+        self.apply_energy_decay(0.5)
         
         if self.energy <= 0:
             self.alive = False

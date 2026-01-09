@@ -57,8 +57,7 @@ class Agent:
         self.reproduction_timer += 1
         
         # Decay energy
-        energy_cost = 0.3 / self.traits.energy_efficiency
-        self.energy -= energy_cost
+        self.apply_energy_decay(0.3)
         
         # Die if out of energy
         if self.energy <= 0:
@@ -102,10 +101,27 @@ class Agent:
             self.direction = math.atan2(dy, dx)
             speed = self.traits.speed * speed_multiplier
             self.velocity_x = (dx / distance) * speed
-            self.velocity_y = (dy / distance) * speed
+        self.velocity_y = (dy / distance) * speed
+        
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+    
+    def apply_energy_decay(self, base_cost: float) -> float:
+        """
+        Apply an energy tick scaled by size and speed.
+        
+        Args:
+            base_cost: Baseline energy cost for the agent type
             
-            self.x += self.velocity_x
-            self.y += self.velocity_y
+        Returns:
+            Energy removed this tick
+        """
+        size_factor = 0.5 + 0.3 * (self.traits.size / 5.0)
+        speed_factor = 0.2 * (self.traits.speed / 3.0)
+        efficiency = max(0.1, self.traits.energy_efficiency)
+        energy_cost = base_cost * (size_factor + speed_factor) / efficiency
+        self.energy -= energy_cost
+        return energy_cost
     
     def move_away(self, target_x, target_y, speed_multiplier=1.0):
         """

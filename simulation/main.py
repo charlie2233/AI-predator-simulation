@@ -46,7 +46,7 @@ class Simulation:
         self.trait_graph = TraitGraph(
             WORLD_WIDTH + 10, 580,
             STATS_PANEL_WIDTH - 20, 110,
-            "Prey Speed Distribution"
+            self._current_trait_title()
         )
         
         # Simulation state
@@ -78,6 +78,10 @@ class Simulation:
                 self.population_graph.prey_history.clear()
                 self.population_graph.predator_history.clear()
                 self.population_graph.food_history.clear()
+            
+            if actions.get('trait_changed'):
+                self.trait_graph.title = self._current_trait_title()
+                self.trait_graph.update(self.world.prey, self._current_trait())
     
     def update(self):
         """Update simulation state."""
@@ -91,7 +95,9 @@ class Simulation:
             self.update_counter += 1
             if self.update_counter % 10 == 0:
                 self.population_graph.update(self.world)
-                self.trait_graph.update(self.world.prey, 'speed')
+                selected_trait = self._current_trait()
+                self.trait_graph.title = self._current_trait_title()
+                self.trait_graph.update(self.world.prey, selected_trait)
         
         # Always update control panel
         self.control_panel.update(self.world)
@@ -164,6 +170,15 @@ class Simulation:
         
         pygame.quit()
         sys.exit()
+    
+    def _current_trait(self):
+        """Trait currently selected in the control panel."""
+        return self.control_panel.get_selected_trait()
+    
+    def _current_trait_title(self):
+        """Formatted title for the trait histogram."""
+        trait_name = self._current_trait().replace('_', ' ').title()
+        return f"Prey {trait_name} Distribution"
 
 
 def main():

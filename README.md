@@ -96,6 +96,7 @@ python -m simulation.main
 - **Speed Slider**: Drag to adjust simulation speed
 - **Pause Button**: Click to pause/resume
 - **Reset Button**: Click to reset the simulation
+- **Next Trait Button**: Cycle the trait histogram between speed, vision, energy efficiency, and size
 
 ## How It Works
 
@@ -106,6 +107,7 @@ python -m simulation.main
 4. **Energy** depletes over time; agents die if energy reaches zero
 5. **Reproduction** occurs when agents have sufficient energy
 6. **Offspring** inherit traits from parents with mutations
+7. **Energy Costs** scale with agent size and speed, rewarding efficient genetic combinations
 
 ### Evolution Process
 1. Agents with better-suited traits survive longer

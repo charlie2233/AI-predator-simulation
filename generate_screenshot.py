@@ -41,6 +41,11 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
     # Create world and UI
     world = World(WORLD_WIDTH, WORLD_HEIGHT)
     
+    def trait_title(trait_name: str) -> str:
+        """Helper to keep trait graph labeling consistent."""
+        pretty_name = trait_name.replace('_', ' ').title()
+        return f"Prey {pretty_name} Distribution"
+    
     control_panel = ControlPanel(
         WORLD_WIDTH + 10, 10,
         STATS_PANEL_WIDTH - 20, 400
@@ -54,16 +59,18 @@ def generate_screenshot(filename='simulation_screenshot.png', steps=100):
     trait_graph = TraitGraph(
         WORLD_WIDTH + 10, 580,
         STATS_PANEL_WIDTH - 20, 110,
-        "Prey Speed Distribution"
+        trait_title(control_panel.get_selected_trait())
     )
     
     # Run simulation
     print(f"Running simulation...")
+    current_trait = control_panel.get_selected_trait()
     for i in range(steps):
         world.update()
         if i % 10 == 0:
             population_graph.update(world)
-            trait_graph.update(world.prey, 'speed')
+            trait_graph.title = trait_title(current_trait)
+            trait_graph.update(world.prey, current_trait)
     
     control_panel.update(world)
     
