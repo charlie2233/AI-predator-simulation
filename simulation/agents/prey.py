@@ -3,6 +3,7 @@ Prey agent implementation.
 """
 import pygame
 import random
+from typing import TYPE_CHECKING
 from simulation.agents.agent import Agent
 from simulation.evolution.genetics import GeneticTraits
 from simulation.config import (
@@ -10,6 +11,9 @@ from simulation.config import (
     PREY_REPRODUCTION_ENERGY, PREY_REPRODUCTION_COST,
     GREEN, YELLOW
 )
+
+if TYPE_CHECKING:
+    from simulation.agents.predator import Predator
 
 
 class Prey(Agent):
@@ -65,6 +69,7 @@ class Prey(Agent):
             return
         
         # Find predators and food
+        from simulation.agents.predator import Predator  # Import here to avoid circular dependency
         predators = [a for a in agents if isinstance(a, Predator) and a.alive]
         nearest_predator = self.find_nearest(predators)
         nearest_food = self.find_nearest(food_items)
@@ -156,6 +161,3 @@ class Prey(Agent):
         # Draw vision range (for debugging, can be toggled)
         # pygame.draw.circle(surface, (*color, 50), (int(self.x), int(self.y)), int(self.traits.vision), 1)
 
-
-# Import here to avoid circular import
-from simulation.agents.predator import Predator

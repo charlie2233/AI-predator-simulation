@@ -44,7 +44,7 @@ class GeneticTraits:
                 
                 setattr(self, trait, new_value)
     
-    def crossover(self, other):
+    def crossover(self, other: 'GeneticTraits') -> 'GeneticTraits':
         """
         Create offspring traits by combining with another parent.
         

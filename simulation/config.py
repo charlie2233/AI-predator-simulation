@@ -56,8 +56,8 @@ FOOD_ENERGY_VALUE = 30
 FOOD_RESPAWN_RATE = 0.02  # Probability per frame
 
 # Evolution settings
-MUTATION_RATE = 0.1
-MUTATION_STRENGTH = 0.15
+MUTATION_RATE = 0.1  # Probability of mutation per trait (0.0-1.0)
+MUTATION_STRENGTH = 0.15  # Standard deviation of mutation as fraction of current value (0.0-1.0)
 TRAIT_MIN_VALUES = {
     'speed': 0.5,
     'vision': 20,

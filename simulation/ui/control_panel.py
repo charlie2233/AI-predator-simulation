@@ -179,7 +179,7 @@ class ControlPanel:
         
         # Draw all UI elements
         for label in self.labels.values():
-            if 'title' in label.text or label.font_size > UI_FONT_SIZE:
+            if hasattr(label, 'font_size') and label.font_size > UI_FONT_SIZE:
                 label.draw(surface, self.title_font)
             else:
                 label.draw(surface, self.font)

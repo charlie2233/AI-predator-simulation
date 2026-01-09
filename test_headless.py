@@ -37,17 +37,22 @@ def run_headless_test(steps=500):
     # Track statistics
     report_interval = steps // 10
     
+    # Cache for average calculations
+    cached_prey_speed = 0
+    cached_pred_speed = 0
+    
     for step in range(steps):
         world.update()
         
         # Report progress
         if step % report_interval == 0:
-            avg_prey_speed = (sum(p.traits.speed for p in world.prey) / len(world.prey)) if world.prey else 0
-            avg_pred_speed = (sum(p.traits.speed for p in world.predators) / len(world.predators)) if world.predators else 0
+            # Calculate averages only when reporting
+            cached_prey_speed = (sum(p.traits.speed for p in world.prey) / len(world.prey)) if world.prey else 0
+            cached_pred_speed = (sum(p.traits.speed for p in world.predators) / len(world.predators)) if world.predators else 0
             
             print(f"  Step {step:4d}: "
-                  f"Prey={len(world.prey):3d} (speed={avg_prey_speed:.2f}), "
-                  f"Predators={len(world.predators):3d} (speed={avg_pred_speed:.2f}), "
+                  f"Prey={len(world.prey):3d} (speed={cached_prey_speed:.2f}), "
+                  f"Predators={len(world.predators):3d} (speed={cached_pred_speed:.2f}), "
                   f"Food={len(world.food):3d}")
     
     # Final report

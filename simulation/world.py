@@ -117,7 +117,7 @@ class World:
                 # Try to find nearby partner
                 partner = None
                 for other in self.prey:
-                    if other is not prey and other.can_reproduce() and prey.distance_to(other) < 50:
+                    if other != prey and other.can_reproduce() and prey.distance_to(other) < 50:
                         partner = other
                         break
                 
@@ -132,7 +132,7 @@ class World:
                 # Try to find nearby partner
                 partner = None
                 for other in self.predators:
-                    if other is not predator and other.can_reproduce() and predator.distance_to(other) < 50:
+                    if other != predator and other.can_reproduce() and predator.distance_to(other) < 50:
                         partner = other
                         break
                 
