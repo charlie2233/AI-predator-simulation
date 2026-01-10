@@ -1,0 +1,62 @@
+{
+  "first_gen": {
+    "unlocked": true,
+    "progress": 0.0
+  },
+  "veteran": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "master": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "population_boom": {
+    "unlocked": true,
+    "progress": 0.0
+  },
+  "mega_city": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "phoenix": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "resilient": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "diverse": {
+    "unlocked": true,
+    "progress": 0.0
+  },
+  "balanced": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "survivor": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "apocalypse": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "speedster": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "eagle_eye": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "titan": {
+    "unlocked": false,
+    "progress": 0.0
+  },
+  "marathon": {
+    "unlocked": false,
+    "progress": 0.0
+  }
+}

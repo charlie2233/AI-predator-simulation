@@ -5,28 +5,23 @@ Configuration settings for the predator-prey simulation.
 # Determinism
 RANDOM_SEED = 42
 
-# World settings (can be overridden from control panel on reset)
-WORLD_WIDTH = 3200  # 4x area vs original
-WORLD_HEIGHT = 2400
+# World settings (optimized for performance - 2x bigger, GPU-friendly)
+WORLD_WIDTH = 6400   # Big map but optimized for CPU rendering
+WORLD_HEIGHT = 4800  # 2x original size - better performance
 GRID_SIZE = 10
 OBSTACLES_ENABLED = False
-OBSTACLE_COUNT = 4
+OBSTACLE_COUNT = 8   # Moderate obstacles
 OBSTACLE_RADIUS = 25
-ROCK_COUNT = 80
+ROCK_COUNT = 160     # 2x rocks (less draw calls)
 ROCK_RESPAWN_RATE = 0.01
 SHELTER_RADIUS = 30
-WATER_ZONE_COUNT = 3          # Number of water bands (sea/river)
-WATER_ZONE_WIDTH = 240        # Width of each band
+WATER_ZONE_COUNT = 4          # Balanced water zones
+WATER_ZONE_WIDTH = 320        # Moderate width
 WATER_ZONE_HEIGHT = WORLD_HEIGHT
-WATER_BLOOM_RATE = 0.12       # Chance to spawn plant near water when under count
-DISASTER_RADIUS = 320         # Default radius for localized disasters
+WATER_BLOOM_RATE = 0.10       # Balanced spawn rate
+DISASTER_RADIUS = 400         # Scaled disaster radius
 SEA_COLOR = (25, 70, 140)
 RIVER_COLOR = (20, 100, 70)
-WATER_ZONE_COUNT = 3          # Number of river/sea bands
-WATER_ZONE_WIDTH = 220        # Width of each water band
-WATER_ZONE_HEIGHT = WORLD_HEIGHT
-WATER_BLOOM_RATE = 0.08       # Chance to spawn food near water when under count
-DISASTER_RADIUS = 300         # Default radius for localized disasters
 
 # Episode / evolution
 EPISODE_LENGTH_STEPS = 800
@@ -37,13 +32,13 @@ MAX_EVENT_CASUALTY_FRACTION = 0.3  # cap per species when disasters hit
 REPRODUCTION_BOOST = 1.2           # multiplier for next-gen child counts
 COLLAPSE_RESET_ONLY = True         # if True, end generation only on collapse/extinction (not on step timer)
 COLLAPSE_AGENT_FRACTION = 0.12     # collapse threshold vs initial agent count
-COLLAPSE_MIN_AGENTS = 12           # hard floor for collapse threshold
+COLLAPSE_MIN_AGENTS = 24           # hard floor for collapse threshold (2x for bigger map)
 COLLAPSE_GRACE_STEPS = 90          # avoid instant resets at generation start
 
-# Display settings
+# Display settings (optimized for performance)
 WINDOW_WIDTH = 1300
 WINDOW_HEIGHT = 760
-FPS = 60
+FPS = 60  # Can lower to 30 if still slow
 STATS_PANEL_WIDTH = 450
 
 # Colors (Dracula / Pastel Theme)
@@ -69,15 +64,15 @@ UI_ACCENT_COLOR = (189, 147, 249) # Purple accent
 UI_HOVER_COLOR = (255, 121, 198)  # Pink hover
 UI_BORDER_COLOR = (98, 114, 164)
 
-# Species initial counts (overridable via control panel)
+# Species initial counts (optimized 2x for performance)
 INITIAL_SPECIES_COUNTS = {
-    'grazer': 40,
-    'hunter': 18,
-    'scavenger': 12,
-    'protector': 10,
-    'parasite': 10,
-    'apex': 6,
-    'sea_hunter': 14,
+    'grazer': 80,       # 2x - better performance
+    'hunter': 36,       # 2x predators
+    'scavenger': 24,    # 2x scavengers
+    'protector': 20,    # 2x protectors
+    'parasite': 20,     # 2x parasites
+    'apex': 12,         # 2x apex predators
+    'sea_hunter': 28,   # 2x sea hunters
 }
 
 # DNA ranges per species (min, max) used for mutation clamping
@@ -207,8 +202,8 @@ CLAN_TRAITS = [
     {"speed": 1.05, "vision": 1.05, "energy_efficiency": 0.9},      # aggressive
 ]
 
-# Food settings
-FOOD_COUNT = 350
+# Food settings (optimized for performance - 2x scale)
+FOOD_COUNT = 700       # 2x food - balanced for performance
 FOOD_SIZE = 6
 FOOD_ENERGY_VALUE = 35
 FOOD_RESPAWN_RATE = 0.03  # Probability per frame
@@ -217,7 +212,7 @@ FOOD_COLOR = (139, 233, 145)   # Soft Green
 CARCASS_COLOR = (255, 184, 108) # Soft Orange/Brown
 FOOD_SIZE_RANGE = (4, 9)
 FOOD_ENERGY_RANGE = (20, 45)
-TREE_COUNT = 120
+TREE_COUNT = 240       # 2x trees - less rendering overhead
 TREE_SIZE_RANGE = (10, 18)
 TREE_ENERGY_VALUE = 80
 
@@ -242,5 +237,5 @@ UI_BUTTON_HEIGHT = 36
 UI_FONT_SIZE = 18
 UI_TITLE_FONT_SIZE = 24
 
-# Simulation settings
-MAX_AGENTS = 900
+# Simulation settings (optimized for CPU performance)
+MAX_AGENTS = 1800  # 2x capacity - better performance on CPU
