@@ -19,6 +19,8 @@ class Scavenger(Agent):
         regular_food = [f for f in context["food"] if not getattr(f, "is_carcass", False)]
         predators = context["populations"].get("hunter", [])
         grazer_targets = context["populations"].get("grazer", [])
+        in_water = context["is_in_water"](self.x, self.y)
+        nearest_land = context["nearest_land_point"](self.x, self.y) if in_water else None
 
         nearest_pred = self.find_nearest(predators)
         if nearest_pred and self.distance_to(nearest_pred) < self.vision * 0.8:
@@ -39,13 +41,17 @@ class Scavenger(Agent):
                 # Light hunting if nothing else
                 target = self.find_nearest(grazer_targets, max_distance=self.vision * 0.5)
                 if target and random.random() < 0.35:
-                    self.move_towards(target.x, target.y, speed_multiplier=1.05)
+                    speed_mult = 0.7 if in_water else 1.05
+                    self.move_towards(target.x, target.y, speed_multiplier=speed_mult)
                     if self.distance_to(target) < self.size + target.size:
                         target.alive = False
                         self.energy = min(self.max_energy, self.energy + 20)
                         self.metrics["kills"] += 1
                 else:
-                    self.move()
+                    if in_water and nearest_land:
+                        self.move_towards(nearest_land[0], nearest_land[1], speed_multiplier=1.0)
+                    else:
+                        self.move()
 
         self.clamp_position()
 

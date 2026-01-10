@@ -99,8 +99,10 @@ class Simulation:
                     self.paused = self.control_panel.paused
                 if actions.get("reset_gen"):
                     self.world.reset_generation()
+                    self.population_graph.add_reset_mark()
                 if actions.get("reset_all"):
                     self.world.reset_all(self.control_panel.get_config_overrides())
+                    self.population_graph.add_reset_mark()
                 if actions.get("export"):
                     self._export_stats()
                 if actions.get("trait_changed"):
@@ -158,6 +160,19 @@ class Simulation:
             brightness = random.randint(100, 200)
             pygame.draw.circle(self.world_surface, (brightness, brightness, brightness + 30), (star_x, star_y), 1)
 
+        # Water zones overlay (sea vs river colors)
+        for zx, zy, zw, zh, ztype in self.world.water_zones:
+            water_rect = pygame.Rect(int(zx), int(zy), int(zw), int(zh))
+            if ztype == "sea":
+                color = SEA_COLOR
+                accent = (min(255, SEA_COLOR[0] + 30), min(255, SEA_COLOR[1] + 30), min(255, SEA_COLOR[2] + 30))
+            else:
+                color = RIVER_COLOR
+                accent = (min(255, RIVER_COLOR[0] + 40), min(255, RIVER_COLOR[1] + 40), min(255, RIVER_COLOR[2] + 40))
+            pygame.draw.rect(self.world_surface, color, water_rect)
+            for i in range(0, int(zh), 18):
+                pygame.draw.line(self.world_surface, accent, (int(zx), int(zy + i)), (int(zx + zw), int(zy + i)), 1)
+
         for food in self.world.food:
             food.draw(self.world_surface)
         for rock in self.world.rocks:
@@ -169,7 +184,10 @@ class Simulation:
 
         scaled_surface = pygame.transform.smoothscale(
             self.world_surface,
-            (int(WORLD_WIDTH * self.zoom), int(WORLD_HEIGHT * self.zoom)),
+            (
+                min(self.viewport_width, int(WORLD_WIDTH * self.zoom)),
+                min(WINDOW_HEIGHT, int(WORLD_HEIGHT * self.zoom)),
+            ),
         )
         
         # Clip world view to the viewport area
@@ -181,8 +199,8 @@ class Simulation:
             (
                 self.camera_offset[0],
                 self.camera_offset[1],
-                int(WORLD_WIDTH * self.zoom),
-                int(WORLD_HEIGHT * self.zoom),
+                min(self.viewport_width, int(WORLD_WIDTH * self.zoom)),
+                min(WINDOW_HEIGHT, int(WORLD_HEIGHT * self.zoom)),
             ),
             2,
         )

@@ -18,13 +18,19 @@ class Protector(Agent):
         predators = context["populations"].get("hunter", [])
         rocks = context.get("rocks", [])
         build_shelter = context.get("build_shelter")
+        in_water = context["is_in_water"](self.x, self.y)
+        nearest_land = context["nearest_land_point"](self.x, self.y) if in_water else None
 
         # Escort nearest grazer
         escort = self.find_nearest(grazers, max_distance=self.vision)
         if escort:
-            self.move_towards(escort.x, escort.y, speed_multiplier=0.9)
+            speed_mult = 0.7 if in_water else 0.9
+            self.move_towards(escort.x, escort.y, speed_multiplier=speed_mult)
         else:
-            self.move()
+            if in_water and nearest_land:
+                self.move_towards(nearest_land[0], nearest_land[1], speed_multiplier=1.0)
+            else:
+                self.move()
 
         # Convert rock to shelter if nearby
         rock = self.find_nearest(rocks, max_distance=self.size + 10)

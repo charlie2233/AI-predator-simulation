@@ -14,7 +14,6 @@ class Grazer(Agent):
     def update(self, context):
         if not self.base_update():
             return
-
         food_items = context["food"]
         predators = context["populations"].get("hunter", []) + context["populations"].get("parasite", [])
         protectors = context["populations"].get("protector", [])
@@ -22,13 +21,16 @@ class Grazer(Agent):
         rocks = context.get("rocks", [])
         shelters = context.get("shelters", [])
         build_shelter = context.get("build_shelter")
+        in_water = context["is_in_water"](self.x, self.y)
+        nearest_land = context["nearest_land_point"](self.x, self.y) if in_water else None
 
         nearest_predator = self.find_nearest(predators)
         if nearest_predator and self.distance_to(nearest_predator) < self.vision:
-            # Head toward shelter if one is near, else flee and push rocks along the way
             shelter = self.find_nearest(shelters, max_distance=self.vision)
             if shelter:
                 self.move_towards(shelter.x, shelter.y, speed_multiplier=1.1)
+            elif in_water and nearest_land:
+                self.move_towards(nearest_land[0], nearest_land[1], speed_multiplier=1.2)
             else:
                 self.move_away(nearest_predator.x, nearest_predator.y, speed_multiplier=1.4)
         else:
@@ -52,7 +54,10 @@ class Grazer(Agent):
                     self.energy = min(self.max_energy, self.energy + FOOD_ENERGY_VALUE)
                     self.metrics["energy_gained"] += FOOD_ENERGY_VALUE
             else:
-                self.move()
+                if in_water and nearest_land:
+                    self.move_towards(nearest_land[0], nearest_land[1], speed_multiplier=1.0)
+                else:
+                    self.move()
 
         # Stay close to protectors if nearby
         protector = self.find_nearest(protectors, max_distance=self.vision * 0.5)

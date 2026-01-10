@@ -8,7 +8,7 @@ from simulation.agents.food import Food, PlantFood, random_food
 from simulation.agents.terrain import Rock, Shelter
 from simulation.evolution.dna import DNA
 from simulation.evolution.evolution import Archive, reproduce, tournament_selection
-from simulation.species import Grazer, Hunter, Scavenger, Protector, Parasite
+from simulation.species import Grazer, Hunter, Scavenger, Protector, Parasite, Apex, SeaHunter
 from simulation.stats import StatsLogger
 from simulation.config import (
     WORLD_WIDTH,
@@ -31,6 +31,13 @@ from simulation.config import (
     EVENT_SEVERITY,
     MAX_EVENT_CASUALTY_FRACTION,
     TREE_COUNT,
+    WATER_ZONE_COUNT,
+    WATER_ZONE_WIDTH,
+    WATER_ZONE_HEIGHT,
+    WATER_BLOOM_RATE,
+    DISASTER_RADIUS,
+    SEA_COLOR,
+    RIVER_COLOR,
 )
 
 
@@ -40,6 +47,8 @@ SPECIES_CLASS = {
     "scavenger": Scavenger,
     "protector": Protector,
     "parasite": Parasite,
+    "apex": Apex,
+    "sea_hunter": SeaHunter,
 }
 
 
@@ -63,6 +72,7 @@ class World:
         self.food: List[Food] = []
         self.rocks: List[Rock] = []
         self.shelters: List[Shelter] = []
+        self.water_zones: List[Tuple[float, float, float, float, str]] = []  # x, y, w, h, type
         self.obstacles: List[Tuple[float, float]] = []
         self.archive = Archive()
         self.stats = StatsLogger()
@@ -80,6 +90,7 @@ class World:
         self.active_event_text = None
         self.active_event_timer = 0
 
+        self._generate_water_zones()
         self.spawn_initial_population()
 
     def spawn_initial_population(self):
@@ -110,6 +121,18 @@ class World:
                     (random.uniform(OBSTACLE_RADIUS, self.width - OBSTACLE_RADIUS), random.uniform(OBSTACLE_RADIUS, self.height - OBSTACLE_RADIUS))
                 )
 
+    def _generate_water_zones(self):
+        """Create simple vertical water/river bands."""
+        self.water_zones = []
+        band_width = WATER_ZONE_WIDTH
+        for i in range(WATER_ZONE_COUNT):
+            # Evenly spaced random offsets
+            base_x = (i + 1) * self.width / (WATER_ZONE_COUNT + 1)
+            jitter = random.uniform(-band_width * 0.5, band_width * 0.5)
+            x = max(0, min(self.width - band_width, base_x + jitter))
+            zone_type = "sea" if i == 0 else "river"
+            self.water_zones.append((x, 0, band_width, WATER_ZONE_HEIGHT, zone_type))
+
     def _make_agent(self, species: str, dna: DNA = None):
         klass = SPECIES_CLASS[species]
         dna_ranges = SPECIES_DNA_RANGES[species]
@@ -137,6 +160,9 @@ class World:
             "rocks": self.rocks,
             "shelters": self.shelters,
             "build_shelter": self.build_shelter,
+            "is_in_water": self._point_in_water,
+            "nearest_water_point": self._nearest_water_point,
+            "nearest_land_point": self._nearest_land_point,
         }
 
         for species, agents in self.populations.items():
@@ -177,12 +203,16 @@ class World:
             x = random.uniform(0, self.width)
             y = random.uniform(0, self.height)
             self.food.append(random_food(x, y))
+        if len(self.food) < FOOD_COUNT and self.water_zones and random.random() < WATER_BLOOM_RATE:
+            wx, wy = self._random_water_point()
+            self.food.append(PlantFood(wx, wy))
 
     def _push_rocks(self, agent):
         """Allow agents to nudge rocks, making the world feel more interactive."""
         if not self.rocks:
             return
         capacity = agent.dna.genes.get("carry_capacity", 8)
+        rock_skill = agent.dna.genes.get("rock_skill", 1.0)
         for rock in self.rocks:
             if not getattr(rock, "alive", True):
                 continue
@@ -191,13 +221,63 @@ class World:
                 # Nudge rock in agent's facing direction
                 dx = agent.velocity_x
                 dy = agent.velocity_y
-                step = capacity * 0.08
+                step = capacity * 0.08 * rock_skill
                 rock.x = max(0, min(self.width, rock.x + dx * step))
                 rock.y = max(0, min(self.height, rock.y + dy * step))
 
     def _respawn_rocks(self):
         if len(self.rocks) < ROCK_COUNT and random.random() < ROCK_RESPAWN_RATE:
             self.rocks.append(Rock(random.uniform(0, self.width), random.uniform(0, self.height)))
+
+    def _point_in_water(self, x: float, y: float) -> bool:
+        for zx, zy, zw, zh, _ in self.water_zones:
+            if zx <= x <= zx + zw and zy <= y <= zy + zh:
+                return True
+        return False
+
+    def _random_water_point(self) -> Tuple[float, float]:
+        if not self.water_zones:
+            return random.uniform(0, self.width), random.uniform(0, self.height)
+        zx, zy, zw, zh, _ = random.choice(self.water_zones)
+        return random.uniform(zx, zx + zw), random.uniform(zy, zy + zh)
+
+    def _random_land_point(self) -> Tuple[float, float]:
+        for _ in range(15):
+            x = random.uniform(0, self.width)
+            y = random.uniform(0, self.height)
+            if not self._point_in_water(x, y):
+                return x, y
+        return random.uniform(0, self.width), random.uniform(0, self.height)
+
+    def _nearest_water_point(self, x: float, y: float) -> Tuple[float, float]:
+        if not self.water_zones:
+            return None
+        best = None
+        best_dist = float('inf')
+        for zx, zy, zw, zh, _ in self.water_zones:
+            cx = zx + zw / 2
+            cy = zy + zh / 2
+            dist = (cx - x) ** 2 + (cy - y) ** 2
+            if dist < best_dist:
+                best = (cx, cy)
+                best_dist = dist
+        return best
+
+    def _nearest_land_point(self, x: float, y: float) -> Tuple[float, float]:
+        if not self.water_zones or not self._point_in_water(x, y):
+            return (x, y)
+        # Move horizontally toward nearest bank
+        best = None
+        best_dist = float('inf')
+        for zx, zy, zw, zh, _ in self.water_zones:
+            left_bank = zx
+            right_bank = zx + zw
+            for bank_x in (left_bank, right_bank):
+                dist = abs(bank_x - x)
+                if dist < best_dist:
+                    best_dist = dist
+                    best = (bank_x, y)
+        return best if best else (x, y)
 
     def _remove_dead(self):
         """Remove dead entities and ensure non-negative counts."""
@@ -213,14 +293,24 @@ class World:
         """Random disasters to shake dynamics without wiping species."""
         for event_type, prob in EVENT_PROBABILITIES.items():
             if random.random() < prob:
-                self._apply_event(event_type)
+                if event_type == "tsunami":
+                    if not self.water_zones:
+                        continue
+                    center = self._random_water_point()
+                    self._apply_event(event_type, center=center, radius=DISASTER_RADIUS)
+                elif event_type == "earthquake":
+                    center = self._random_land_point()
+                    self._apply_event(event_type, center=center, radius=DISASTER_RADIUS)
+                else:
+                    center = (random.uniform(0, self.width), random.uniform(0, self.height))
+                    self._apply_event(event_type, center=center, radius=DISASTER_RADIUS)
 
     def _apply_event(self, event_type: str, center: Tuple[float, float] = None, radius: float = None):
         severity = EVENT_SEVERITY.get(event_type, 1.0)
         max_casualties = {sp: max(1, int(len(agents) * MAX_EVENT_CASUALTY_FRACTION)) for sp, agents in self.populations.items()}
         casualties = {sp: 0 for sp in self.populations.keys()}
         shelters = self.shelters
-        radius = radius or max(self.width, self.height)  # global if none
+        radius = radius or DISASTER_RADIUS
 
         for species, agents in self.populations.items():
             for agent in agents:
@@ -229,6 +319,10 @@ class World:
                 if center:
                     if agent.distance_to(center) > radius:
                         continue
+                if event_type == "tsunami" and not self._point_in_water(*center):
+                    continue
+                if event_type == "earthquake" and self._point_in_water(*center):
+                    continue
                 sheltered = any(agent.distance_to(sh) < sh.radius for sh in shelters)
                 if sheltered:
                     continue
@@ -256,7 +350,7 @@ class World:
         name = builder.species if builder else "agent"
         self.extinction_log.append(f"Gen {self.generation}: {name} built shelter")
 
-    def apply_manual_event(self, event_type: str, position: Tuple[float, float], radius: float = 140):
+    def apply_manual_event(self, event_type: str, position: Tuple[float, float], radius: float = DISASTER_RADIUS):
         """Trigger a targeted event at a world position."""
         self._apply_event(event_type, center=position, radius=radius)
 

@@ -63,10 +63,10 @@ class Button:
         color = self.hover_color if self.is_hovered else self.color
         
         # Rounded background
-        pygame.draw.rect(surface, color, self.rect, border_radius=8)
+        pygame.draw.rect(surface, color, self.rect, border_radius=self.rect.height // 2)
         
         # Border
-        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=8)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=self.rect.height // 2)
         
         # Text shadow for better readability
         shadow_surface = font.render(self.text, True, (0, 0, 0))
@@ -164,12 +164,12 @@ class Slider:
         surface.blit(label_surface, (self.rect.x, self.rect.y - 20))
         
         # Draw track
-        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=4)
+        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=self.rect.height // 2)
         
         # Draw filled portion
         filled_width = int((self.value - self.min_val) / (self.max_val - self.min_val) * self.rect.width)
         filled_rect = pygame.Rect(self.rect.x, self.rect.y, filled_width, self.rect.height)
-        pygame.draw.rect(surface, UI_ACCENT_COLOR, filled_rect, border_radius=4)
+        pygame.draw.rect(surface, UI_ACCENT_COLOR, filled_rect, border_radius=self.rect.height // 2)
         
         # Draw handle
         pygame.draw.circle(surface, UI_TEXT_COLOR, (self.handle_x, self.handle_y), self.handle_radius)
@@ -247,8 +247,8 @@ class NumericInput:
     def draw(self, surface, font):
         color = UI_ACCENT_COLOR if self.active else UI_PANEL_BG
         
-        pygame.draw.rect(surface, color, self.rect, border_radius=4)
-        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 1, border_radius=4)
+        pygame.draw.rect(surface, color, self.rect, border_radius=self.rect.height // 2)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 1, border_radius=self.rect.height // 2)
         
         label_surface = font.render(f"{self.label}: {self.value}", True, UI_TEXT_COLOR)
         surface.blit(label_surface, (self.rect.x, self.rect.y - 18))

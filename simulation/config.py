@@ -6,15 +6,27 @@ Configuration settings for the predator-prey simulation.
 RANDOM_SEED = 42
 
 # World settings (can be overridden from control panel on reset)
-WORLD_WIDTH = 1800
-WORLD_HEIGHT = 1200
+WORLD_WIDTH = 3200  # 4x area vs original
+WORLD_HEIGHT = 2400
 GRID_SIZE = 10
 OBSTACLES_ENABLED = False
 OBSTACLE_COUNT = 4
 OBSTACLE_RADIUS = 25
-ROCK_COUNT = 35
+ROCK_COUNT = 80
 ROCK_RESPAWN_RATE = 0.01
 SHELTER_RADIUS = 30
+WATER_ZONE_COUNT = 3          # Number of water bands (sea/river)
+WATER_ZONE_WIDTH = 240        # Width of each band
+WATER_ZONE_HEIGHT = WORLD_HEIGHT
+WATER_BLOOM_RATE = 0.12       # Chance to spawn plant near water when under count
+DISASTER_RADIUS = 320         # Default radius for localized disasters
+SEA_COLOR = (25, 70, 140)
+RIVER_COLOR = (20, 100, 70)
+WATER_ZONE_COUNT = 3          # Number of river/sea bands
+WATER_ZONE_WIDTH = 220        # Width of each water band
+WATER_ZONE_HEIGHT = WORLD_HEIGHT
+WATER_BLOOM_RATE = 0.08       # Chance to spawn food near water when under count
+DISASTER_RADIUS = 300         # Default radius for localized disasters
 
 # Episode / evolution
 EPISODE_LENGTH_STEPS = 800
@@ -59,6 +71,8 @@ INITIAL_SPECIES_COUNTS = {
     'scavenger': 12,
     'protector': 10,
     'parasite': 10,
+    'apex': 6,
+    'sea_hunter': 14,
 }
 
 # DNA ranges per species (min, max) used for mutation clamping
@@ -73,6 +87,8 @@ SPECIES_DNA_RANGES = {
         'carry_capacity': (8, 18),
         'bravery': (0.1, 0.9),
         'metabolism': (0.5, 1.5),
+        'swim_factor': (0.2, 0.6),
+        'rock_skill': (0.8, 1.2),
     },
     'hunter': {
         'speed': (1.2, 4.3),
@@ -83,6 +99,8 @@ SPECIES_DNA_RANGES = {
         'carry_capacity': (10, 20),
         'bravery': (0.3, 1.0),
         'metabolism': (0.6, 1.6),
+        'swim_factor': (0.2, 0.6),
+        'rock_skill': (0.9, 1.3),
     },
     'scavenger': {
         'speed': (0.8, 3.3),
@@ -93,6 +111,8 @@ SPECIES_DNA_RANGES = {
         'carry_capacity': (8, 16),
         'bravery': (0.1, 0.7),
         'metabolism': (0.4, 1.4),
+        'swim_factor': (0.2, 0.7),
+        'rock_skill': (0.8, 1.1),
     },
     'protector': {
         'speed': (0.8, 3.3),
@@ -104,6 +124,8 @@ SPECIES_DNA_RANGES = {
         'carry_capacity': (12, 22),
         'bravery': (0.5, 1.0),
         'metabolism': (0.5, 1.5),
+        'swim_factor': (0.2, 0.6),
+        'rock_skill': (1.0, 1.4),
     },
     'parasite': {
         'speed': (1.0, 3.3),
@@ -115,6 +137,32 @@ SPECIES_DNA_RANGES = {
         'carry_capacity': (6, 14),
         'bravery': (0.0, 0.6),
         'metabolism': (0.3, 1.2),
+        'swim_factor': (0.3, 0.8),
+        'rock_skill': (0.6, 1.0),
+    },
+    'apex': {
+        'speed': (1.5, 4.8),
+        'vision': (110, 280),
+        'size': (7, 12),
+        'energy_efficiency': (0.5, 1.6),
+        'attack_range': (6, 14),
+        'carry_capacity': (12, 24),
+        'bravery': (0.7, 1.0),
+        'metabolism': (0.7, 1.7),
+        'swim_factor': (0.2, 0.5),
+        'rock_skill': (1.2, 1.6),
+    },
+    'sea_hunter': {
+        'speed': (1.0, 3.6),
+        'vision': (100, 260),
+        'size': (6, 11),
+        'energy_efficiency': (0.7, 2.0),
+        'carry_capacity': (10, 18),
+        'water_bias': (0.6, 1.0),
+        'bravery': (0.4, 0.9),
+        'metabolism': (0.6, 1.5),
+        'swim_factor': (0.8, 1.4),
+        'rock_skill': (0.9, 1.2),
     },
 }
 
@@ -125,15 +173,27 @@ SPECIES_STYLE = {
     'scavenger': {'color': (255, 184, 108), 'shape': 'square'},  # Orange
     'protector': {'color': (139, 233, 253), 'shape': 'diamond'}, # Cyan
     'parasite': {'color': (189, 147, 249), 'shape': 'hex'},      # Purple
+    'apex': {'color': (255, 255, 140), 'shape': 'triangle'},     # Yellow apex
+    'sea_hunter': {'color': (120, 200, 255), 'shape': 'circle'}, # Blue sea clan
 }
 CLAN_ACCENTS = [
     (255, 255, 255),
     (210, 235, 255),
     (255, 230, 210),
+    (200, 255, 220),
+    (255, 220, 255),
+    (220, 255, 255),
+]
+CLAN_TRAITS = [
+    {"speed": 1.0, "vision": 1.0, "energy_efficiency": 1.0},        # neutral
+    {"speed": 1.1, "vision": 0.95, "energy_efficiency": 0.95},      # swift
+    {"speed": 0.95, "vision": 1.1, "energy_efficiency": 1.05},      # sentry
+    {"speed": 1.0, "vision": 1.0, "energy_efficiency": 1.1},        # efficient
+    {"speed": 1.05, "vision": 1.05, "energy_efficiency": 0.9},      # aggressive
 ]
 
 # Food settings
-FOOD_COUNT = 200
+FOOD_COUNT = 350
 FOOD_SIZE = 6
 FOOD_ENERGY_VALUE = 35
 FOOD_RESPAWN_RATE = 0.03  # Probability per frame
@@ -142,7 +202,7 @@ FOOD_COLOR = (139, 233, 145)   # Soft Green
 CARCASS_COLOR = (255, 184, 108) # Soft Orange/Brown
 FOOD_SIZE_RANGE = (4, 9)
 FOOD_ENERGY_RANGE = (20, 45)
-TREE_COUNT = 50
+TREE_COUNT = 120
 TREE_SIZE_RANGE = (10, 18)
 TREE_ENERGY_VALUE = 80
 
