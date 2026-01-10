@@ -70,6 +70,16 @@ class Agent:
     def size(self) -> float:
         return self.dna.genes.get("size", 4)
 
+    @property
+    def metabolism(self) -> float:
+        """Energy consumption multiplier. Lower is better."""
+        return self.dna.genes.get("metabolism", 1.0)
+
+    @property
+    def bravery(self) -> float:
+        """Likelihood to fight vs flee (0.0 to 1.0)."""
+        return self.dna.genes.get("bravery", 0.5)
+
     def decay_cooldowns(self):
         """Reduce all cooldown counters."""
         for key in list(self.cooldowns.keys()):
@@ -84,19 +94,37 @@ class Agent:
         self.age += 1
         self.metrics["survival_time"] += 1
         self.decay_cooldowns()
+        
+        # Idle energy cost
         self.apply_energy_decay(0.3)
+        
         if self.energy <= 0:
             self.alive = False
             return False
         return True
 
     def move(self):
-        """Random wandering with some persistence."""
+        """Random wandering with some persistence, plus fleeing if scared."""
         if "stunned" in self.cooldowns:
             return
-        if random.random() < 0.15:
-            self.direction += random.uniform(-0.6, 0.6)
-        speed = self.speed * (0.6 if "slowed" in self.cooldowns else 1.0)
+
+        # Fleeing logic?
+        # If low health and low bravery, move erratically or faster
+        fleeing = False
+        if self.energy < 30 and self.bravery < 0.4:
+            fleeing = True
+
+        if random.random() < (0.15 if not fleeing else 0.4):
+            change = random.uniform(-0.6, 0.6)
+            if fleeing:
+                change *= 2.0  # Panic turns
+            self.direction += change
+
+        base_speed = self.speed
+        if fleeing:
+            base_speed *= 1.2  # Adrenaline boost (costs more energy implicitly by distance)
+        
+        speed = base_speed * (0.6 if "slowed" in self.cooldowns else 1.0)
         self.velocity_x = math.cos(self.direction) * speed
         self.velocity_y = math.sin(self.direction) * speed
         self.x += self.velocity_x
@@ -160,7 +188,7 @@ class Agent:
 
     def apply_energy_decay(self, base_cost: float) -> float:
         """
-        Apply an energy tick scaled by size and speed.
+        Apply an energy tick scaled by size, speed, and metabolism.
 
         Args:
             base_cost: Baseline energy cost for the agent type
@@ -168,7 +196,11 @@ class Agent:
         size_factor = 0.5 + 0.3 * (self.size / 5.0)
         speed_factor = 0.2 * (self.speed / 3.0)
         efficiency = max(0.1, self.dna.genes.get("energy_efficiency", 1.0))
-        energy_cost = base_cost * (size_factor + speed_factor) / efficiency
+        
+        # Metabolism multiplier (lower metabolism = lower cost)
+        metabolism_factor = self.metabolism
+        
+        energy_cost = base_cost * (size_factor + speed_factor) * metabolism_factor / efficiency
         self.energy -= energy_cost
         return energy_cost
 
@@ -238,5 +270,12 @@ class Agent:
         pygame.draw.circle(surface, pupil_color, left_eye, max(1, eye_radius // 2))
         pygame.draw.circle(surface, pupil_color, right_eye, max(1, eye_radius // 2))
 
-        smile_rect = pygame.Rect(pos[0] - size // 2, pos[1], size, size // 2)
-        pygame.draw.arc(surface, pupil_color, smile_rect, math.pi / 10, math.pi - math.pi / 10, 3)
+        # Smile changes if scared (low bravery + low health)
+        frightened = self.energy < 30 and self.bravery < 0.4
+        
+        if frightened:
+            # O mouth
+            pygame.draw.circle(surface, pupil_color, (pos[0], pos[1] + size // 3), max(2, size // 4), 1)
+        else:
+            smile_rect = pygame.Rect(pos[0] - size // 2, pos[1], size, size // 2)
+            pygame.draw.arc(surface, pupil_color, smile_rect, math.pi / 10, math.pi - math.pi / 10, 3)

@@ -18,6 +18,7 @@ class PopulationGraph:
         self.max_history = max_history
         self.history = {name: deque(maxlen=max_history) for name in species_names}
         self.food_history = deque(maxlen=max_history)
+        self.reset_marks = deque(maxlen=max_history)
         self.font = None
         self.species_names = species_names
     
@@ -25,6 +26,10 @@ class PopulationGraph:
         for name in self.species_names:
             self.history[name].append(len(world.populations.get(name, [])))
         self.food_history.append(len(world.food))
+
+    def add_reset_mark(self):
+        """Mark a vertical line for generation/reset events."""
+        self.reset_marks.append(len(self.food_history))
     
     def draw(self, surface):
         if not self.font:
@@ -60,6 +65,7 @@ class PopulationGraph:
             color = SPECIES_STYLE.get(name, {}).get("color", WHITE)
             self.draw_line(surface, hist, max_val, color)
         self.draw_line(surface, self.food_history, max_val, ORANGE)
+        self._draw_marks(surface)
         
         # Legend
         legend_y = self.rect.bottom - 20
@@ -87,6 +93,14 @@ class PopulationGraph:
             
         if len(points) > 1:
             pygame.draw.lines(surface, color, False, points, 2)
+
+    def _draw_marks(self, surface):
+        if not self.reset_marks:
+            return
+        graph_width = self.rect.width - 20
+        for mark in self.reset_marks:
+            x = self.rect.x + 10 + (mark * graph_width) // max(1, self.max_history)
+            pygame.draw.line(surface, UI_ACCENT_COLOR, (x, self.rect.y + 25), (x, self.rect.bottom - 25), 1)
     
     def draw_legend_item(self, surface, x, y, color, text):
         pygame.draw.circle(surface, color, (x + 5, y + 5), 4)

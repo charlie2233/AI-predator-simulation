@@ -4,7 +4,7 @@ World environment and generational evolution.
 import random
 from typing import Dict, List, Tuple
 
-from simulation.agents.food import Food
+from simulation.agents.food import Food, PlantFood, random_food
 from simulation.agents.terrain import Rock, Shelter
 from simulation.evolution.dna import DNA
 from simulation.evolution.evolution import Archive, reproduce, tournament_selection
@@ -30,6 +30,7 @@ from simulation.config import (
     EVENT_PROBABILITIES,
     EVENT_SEVERITY,
     MAX_EVENT_CASUALTY_FRACTION,
+    TREE_COUNT,
 )
 
 
@@ -69,6 +70,15 @@ class World:
         self.generation = 1
         self.episode_step = 0
         self.extinction_log: List[str] = []
+        
+        # New stats / visual state
+        self.run_history = {
+            "starts": 1,
+            "extinctions": 0,
+            "manual_resets": 0
+        }
+        self.active_event_text = None
+        self.active_event_timer = 0
 
         self.spawn_initial_population()
 
@@ -83,7 +93,11 @@ class World:
         for _ in range(FOOD_COUNT):
             x = random.uniform(0, self.width)
             y = random.uniform(0, self.height)
-            self.food.append(Food(x, y))
+            self.food.append(random_food(x, y))
+        for _ in range(TREE_COUNT):
+            x = random.uniform(0, self.width)
+            y = random.uniform(0, self.height)
+            self.food.append(PlantFood(x, y))
 
         self.rocks = []
         for _ in range(ROCK_COUNT):
@@ -110,6 +124,11 @@ class World:
     def update(self):
         """Update all entities in the world."""
         self.episode_step += 1
+        
+        if self.active_event_timer > 0:
+            self.active_event_timer -= 1
+            if self.active_event_timer <= 0:
+                self.active_event_text = None
 
         context = {
             "food": self.food,
@@ -157,7 +176,7 @@ class World:
         if len(self.food) < FOOD_COUNT and random.random() < self.food_respawn_rate:
             x = random.uniform(0, self.width)
             y = random.uniform(0, self.height)
-            self.food.append(Food(x, y))
+            self.food.append(random_food(x, y))
 
     def _push_rocks(self, agent):
         """Allow agents to nudge rocks, making the world feel more interactive."""
@@ -184,8 +203,7 @@ class World:
         """Remove dead entities and ensure non-negative counts."""
         for key in list(self.populations.keys()):
             self.populations[key] = [a for a in self.populations[key] if a.alive]
-            if len(self.populations[key]) < 0:
-                self.populations[key] = []
+            # No logic to empty list if < 0 because it's impossible for len to be < 0
 
         self.food = [f for f in self.food if f.alive]
         self.rocks = [r for r in self.rocks if getattr(r, "alive", True)]
@@ -222,7 +240,12 @@ class World:
                     casualties[species] += 1
 
         loc_text = f" at {center}" if center else ""
-        self.extinction_log.append(f"Gen {self.generation} event: {event_type}{loc_text} (sev {severity:.1f})")
+        msg = f"Gen {self.generation} event: {event_type}{loc_text} (sev {severity:.1f})"
+        self.extinction_log.append(msg)
+        
+        # UI Notification
+        self.active_event_text = f"EVENT: {event_type.upper()}"
+        self.active_event_timer = 180  # 3 seconds @ 60 FPS
 
     def build_shelter(self, rock: Rock, builder=None):
         """Convert rock into shelter."""
@@ -269,6 +292,10 @@ class World:
         self.stats.record(self.generation, counts, mean_dna, extinctions)
         if extinctions:
             self.extinction_log.extend([f"Gen {self.generation}: {sp} extinct" for sp in extinctions])
+            if len(extinctions) == len(SPECIES_CLASS):
+                self.run_history["extinctions"] += 1
+                self.active_event_text = "MASS EXTINCTION!"
+                self.active_event_timer = 300
 
         # Build next generation
         new_populations: Dict[str, List] = {name: [] for name in SPECIES_CLASS.keys()}
@@ -291,7 +318,10 @@ class World:
         self.populations = new_populations
         self.food = []
         for _ in range(FOOD_COUNT):
-            self.food.append(Food(random.uniform(0, self.width), random.uniform(0, self.height)))
+            self.food.append(random_food(random.uniform(0, self.width), random.uniform(0, self.height)))
+        # Respawn trees occasionally on new gen
+        for _ in range(TREE_COUNT // 2): 
+             self.food.append(PlantFood(random.uniform(0, self.width), random.uniform(0, self.height)))
 
         self.episode_step = 0
         self.generation += 1
@@ -303,16 +333,19 @@ class World:
 
     def reset_generation(self):
         """End episode early and restart."""
+        self.run_history["manual_resets"] += 1
         self.end_episode()
 
     def reset_all(self, config_overrides=None):
         """Reset world and archive."""
         config_overrides = config_overrides or {}
+        # Preserve history across resets if desired, or not?
+        # User wants "how many times have this game started". I should probably preserve it if this is just "Reset All" button in the same session.
+        history = self.run_history
         self.__init__(self.width, self.height, config_overrides)
-        self.archive = Archive()
-        self.stats = StatsLogger()
-        self.generation = 1
-        self.episode_step = 0
+        self.run_history["starts"] = history["starts"] + 1
+        self.run_history["extinctions"] = history["extinctions"]
+        self.run_history["manual_resets"] = history["manual_resets"]
 
     def get_all_agents(self):
         """Get all agents in the world."""

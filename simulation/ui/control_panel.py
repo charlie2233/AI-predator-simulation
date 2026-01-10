@@ -40,7 +40,7 @@ class ControlPanel:
         self.paused = False
         self.show_vision = False
         self.simulation_speed = 1.0
-        self.trait_options = ["speed", "vision", "energy_efficiency", "size"]
+        self.trait_options = ["speed", "vision", "energy_efficiency", "size", "bravery", "metabolism"]
         self.trait_index = 0
 
         self.buttons = {}
@@ -83,7 +83,10 @@ class ControlPanel:
         self.labels["time_step"] = Label(self.rect.x + x_padding, y, "Step: 0", UI_TEXT_COLOR)
         y += 20
         self.labels["food_count"] = Label(self.rect.x + x_padding, y, "Food: 0", UI_TEXT_COLOR)
-        y += 20
+        y += 25
+        # Run Stats
+        self.labels["run_stats"] = Label(self.rect.x + x_padding, y, "Runs: 1 | Extinctions: 0", UI_ACCENT_COLOR, 16)
+        y += 25
         
         # Population counts in a grid-like fashion
         self.labels["populations"] = {}
@@ -210,6 +213,13 @@ class ControlPanel:
         for species, lbl in self.labels["populations"].items():
             lbl.set_text(f"{species.title()}: {len(world.populations.get(species, []))}")
         self.labels["food_count"].set_text(f"Food: {len(world.food)}")
+        
+        # Update run stats
+        if hasattr(world, "run_history"):
+            s = world.run_history["starts"]
+            e = world.run_history["extinctions"]
+            self.labels["run_stats"].set_text(f"Runs: {s} | Extinctions: {e}")
+
         if self.event_selection:
             self.labels["event_hint"].set_text(f"ARMED: {self.event_selection.upper()}!")
             self.labels["event_hint"].color = UI_ACCENT_COLOR

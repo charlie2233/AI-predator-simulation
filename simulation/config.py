@@ -71,6 +71,8 @@ SPECIES_DNA_RANGES = {
         'cohesion': (0.0, 1.0),
         'dispersion': (0.0, 1.0),
         'carry_capacity': (8, 18),
+        'bravery': (0.1, 0.9),
+        'metabolism': (0.5, 1.5),
     },
     'hunter': {
         'speed': (1.2, 4.3),
@@ -79,6 +81,8 @@ SPECIES_DNA_RANGES = {
         'energy_efficiency': (0.5, 1.8),
         'attack_range': (5, 13),
         'carry_capacity': (10, 20),
+        'bravery': (0.3, 1.0),
+        'metabolism': (0.6, 1.6),
     },
     'scavenger': {
         'speed': (0.8, 3.3),
@@ -87,6 +91,8 @@ SPECIES_DNA_RANGES = {
         'energy_efficiency': (0.8, 2.5),
         'carcass_affinity': (0.5, 2.0),
         'carry_capacity': (8, 16),
+        'bravery': (0.1, 0.7),
+        'metabolism': (0.4, 1.4),
     },
     'protector': {
         'speed': (0.8, 3.3),
@@ -96,6 +102,8 @@ SPECIES_DNA_RANGES = {
         'stun_radius': (26, 70),
         'stun_cooldown': (60, 240),
         'carry_capacity': (12, 22),
+        'bravery': (0.5, 1.0),
+        'metabolism': (0.5, 1.5),
     },
     'parasite': {
         'speed': (1.0, 3.3),
@@ -105,6 +113,8 @@ SPECIES_DNA_RANGES = {
         'drain_rate': (0.4, 2.0),
         'attach_time': (80, 200),
         'carry_capacity': (6, 14),
+        'bravery': (0.0, 0.6),
+        'metabolism': (0.3, 1.2),
     },
 }
 
@@ -130,6 +140,11 @@ FOOD_RESPAWN_RATE = 0.03  # Probability per frame
 CARCASS_ENERGY_VALUE = 55
 FOOD_COLOR = (139, 233, 145)   # Soft Green
 CARCASS_COLOR = (255, 184, 108) # Soft Orange/Brown
+FOOD_SIZE_RANGE = (4, 9)
+FOOD_ENERGY_RANGE = (20, 45)
+TREE_COUNT = 50
+TREE_SIZE_RANGE = (10, 18)
+TREE_ENERGY_VALUE = 80
 
 # Random events (per-step probability per type)
 EVENT_PROBABILITIES = {

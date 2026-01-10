@@ -39,12 +39,14 @@ class Simulation:
         self.clock = pygame.time.Clock()
         self.world = World(WORLD_WIDTH, WORLD_HEIGHT)
 
-        self.control_panel = ControlPanel(WORLD_WIDTH + 10, 10, STATS_PANEL_WIDTH - 20, WINDOW_HEIGHT - 20)
+        self.viewport_width = WINDOW_WIDTH - STATS_PANEL_WIDTH
+        
+        self.control_panel = ControlPanel(self.viewport_width + 10, 10, STATS_PANEL_WIDTH - 20, WINDOW_HEIGHT - 20)
         self.population_graph = PopulationGraph(
-            WORLD_WIDTH + 10, 420, STATS_PANEL_WIDTH - 20, 140, species_names=list(SPECIES_STYLE.keys())
+            self.viewport_width + 10, 420, STATS_PANEL_WIDTH - 20, 140, species_names=list(SPECIES_STYLE.keys())
         )
-        self.trait_graph = TraitGraph(WORLD_WIDTH + 10, 580, STATS_PANEL_WIDTH - 20, 110, self._current_trait_title())
-        self.log_panel = LogPanel(WORLD_WIDTH + 10, 700, STATS_PANEL_WIDTH - 20, 50)
+        self.trait_graph = TraitGraph(self.viewport_width + 10, 580, STATS_PANEL_WIDTH - 20, 110, self._current_trait_title())
+        self.log_panel = LogPanel(self.viewport_width + 10, 700, STATS_PANEL_WIDTH - 20, 50)
 
         self.running = True
         self.paused = True
@@ -53,15 +55,17 @@ class Simulation:
         self.show_credits = False
         self.update_counter = 0
         self.pending_event_type = None
+        self.prev_episode_step = 0
+        self.viewport_width = WINDOW_WIDTH - STATS_PANEL_WIDTH
         self.zoom = 0.6
         self.camera_offset = [0, 0]
 
-        cx = WORLD_WIDTH // 2 - 90
-        cy = WORLD_HEIGHT // 2
+        cx = self.viewport_width // 2
+        cy = WINDOW_HEIGHT // 2
         self.menu_buttons = {
-            "start": Button(cx, cy - 50, 180, 42, "Start Game"),
-            "continue": Button(cx, cy + 5, 180, 42, "Continue"),
-            "credits": Button(cx, cy + 60, 180, 42, "Credits"),
+            "start": Button(cx - 90, cy - 50, 180, 42, "Start Game"),
+            "continue": Button(cx - 90, cy + 5, 180, 42, "Continue"),
+            "credits": Button(cx - 90, cy + 60, 180, 42, "Credits"),
         }
 
     def handle_events(self):
@@ -130,6 +134,7 @@ class Simulation:
                 self.trait_graph.title = self._current_trait_title()
                 self.trait_graph.update(self.world.populations.get("grazer", []), selected_trait)
                 self._pull_logs()
+                self._detect_generation_reset()
 
         self.control_panel.update(self.world)
 
@@ -150,13 +155,25 @@ class Simulation:
             self.world_surface,
             (int(WORLD_WIDTH * self.zoom), int(WORLD_HEIGHT * self.zoom)),
         )
+        
+        # Clip world view to the viewport area
+        self.screen.set_clip(pygame.Rect(0, 0, self.viewport_width, WINDOW_HEIGHT))
         self.screen.blit(scaled_surface, self.camera_offset)
         pygame.draw.rect(
             self.screen,
             UI_BORDER_COLOR,
-            (self.camera_offset[0], self.camera_offset[1], int(WORLD_WIDTH * self.zoom), int(WORLD_HEIGHT * self.zoom)),
+            (
+                self.camera_offset[0],
+                self.camera_offset[1],
+                int(WORLD_WIDTH * self.zoom),
+                int(WORLD_HEIGHT * self.zoom),
+            ),
             2,
         )
+        self.screen.set_clip(None) # Reset clip for UI
+
+        # Draw a divider line
+        pygame.draw.line(self.screen, UI_BORDER_COLOR, (self.viewport_width, 0), (self.viewport_width, WINDOW_HEIGHT), 2)
 
         self.control_panel.draw(self.screen)
         self.population_graph.draw(self.screen)
@@ -167,6 +184,10 @@ class Simulation:
             self._draw_menu()
         elif self.pending_event_type:
             self._draw_event_overlay()
+            
+        # Draw active event notification (Top Center)
+        if self.world.active_event_text:
+            self._draw_active_event()
 
         fps_font = pygame.font.Font(None, 20)
         fps_text = fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, UI_TEXT_COLOR)
@@ -238,7 +259,7 @@ class Simulation:
         self.show_credits = False
 
     def _draw_menu(self):
-        overlay = pygame.Surface((WORLD_WIDTH, WORLD_HEIGHT), pygame.SRCALPHA)
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
         # Dark semi-transparent overlay
         overlay.fill((25, 25, 40, 230))
         title_font = pygame.font.Font(None, 52)
@@ -247,8 +268,11 @@ class Simulation:
         title = title_font.render("Evolving Animals Sandbox", True, UI_TEXT_COLOR)
         subtitle = text_font.render("Start a new world or continue the current run.", True, UI_TEXT_COLOR)
         
-        overlay.blit(title, (WORLD_WIDTH // 2 - title.get_width() // 2, WORLD_HEIGHT // 2 - 140))
-        overlay.blit(subtitle, (WORLD_WIDTH // 2 - subtitle.get_width() // 2, WORLD_HEIGHT // 2 - 110))
+        cx = self.viewport_width // 2
+        cy = WINDOW_HEIGHT // 2
+        
+        overlay.blit(title, (cx - title.get_width() // 2, cy - 140))
+        overlay.blit(subtitle, (cx - subtitle.get_width() // 2, cy - 110))
         
         for btn in self.menu_buttons.values():
             btn.draw(overlay, text_font)
@@ -262,16 +286,45 @@ class Simulation:
             ]
             for i, line in enumerate(credits):
                 txt = text_font.render(line, True, UI_TEXT_COLOR)
-                overlay.blit(txt, (WORLD_WIDTH // 2 - txt.get_width() // 2, WORLD_HEIGHT // 2 + 120 + i * 22))
+                overlay.blit(txt, (cx - txt.get_width() // 2, cy + 120 + i * 22))
         self.screen.blit(overlay, (0, 0))
 
     def _draw_event_overlay(self):
-        overlay = pygame.Surface((WORLD_WIDTH, 40), pygame.SRCALPHA)
+        overlay = pygame.Surface((self.viewport_width, 40), pygame.SRCALPHA)
         overlay.fill((40, 42, 54, 200))
         font = pygame.font.Font(None, 24)
         msg = font.render(f"Armed event: {self.pending_event_type} — click on the world to trigger", True, UI_TEXT_COLOR)
         overlay.blit(msg, (10, 10))
         self.screen.blit(overlay, (0, 0))
+
+    def _draw_active_event(self):
+        """Draw big red text at top for active events."""
+        font = pygame.font.Font(None, 64)
+        # Add shadow
+        text = self.world.active_event_text
+        shadow = font.render(text, True, (0, 0, 0))
+        fg = font.render(text, True, (255, 85, 85)) # Red
+        
+        cx = self.viewport_width // 2
+        cy = 100
+        
+        shadow_rect = shadow.get_rect(center=(cx + 2, cy + 2))
+        fg_rect = fg.get_rect(center=(cx, cy))
+        
+        self.screen.blit(shadow, shadow_rect)
+        self.screen.blit(fg, fg_rect)
+
+    def _handle_zoom(self, direction):
+        self.zoom = max(0.25, min(2.5, self.zoom + direction * 0.1))
+        self.camera_offset = [
+            max(-WORLD_WIDTH, min(WORLD_WIDTH, self.camera_offset[0])),
+            max(-WORLD_HEIGHT, min(WORLD_HEIGHT, self.camera_offset[1])),
+        ]
+
+    def _detect_generation_reset(self):
+        if self.world.episode_step == 0 and self.prev_episode_step > 0:
+            self.population_graph.add_reset_mark()
+        self.prev_episode_step = self.world.episode_step
 
 
 def main():
