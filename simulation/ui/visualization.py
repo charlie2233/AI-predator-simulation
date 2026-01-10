@@ -35,8 +35,15 @@ class PopulationGraph:
         if not self.font:
             self.font = pygame.font.Font(None, 16)
             
-        # Background
-        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=8)
+        # Background with subtle gradient
+        bg_surf = pygame.Surface((self.rect.width, self.rect.height))
+        for i in range(self.rect.height):
+            ratio = i / self.rect.height
+            color = tuple(int(UI_PANEL_BG[j] * (1 + ratio * 0.1)) for j in range(3))
+            pygame.draw.line(bg_surf, color, (0, i), (self.rect.width, i))
+        surface.blit(bg_surf, self.rect.topleft)
+        
+        # Border with glow
         pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=8)
         
         title = self.font.render("Population History", True, UI_TEXT_COLOR)

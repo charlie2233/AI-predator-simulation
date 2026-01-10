@@ -140,7 +140,23 @@ class Simulation:
 
     def draw(self):
         self.screen.fill(UI_BG_COLOR)
-        self.world_surface.fill(BLACK) # World stays black for contrast or can be UI_BG_COLOR
+        
+        # Beautiful gradient background for world
+        world_bg_top = (15, 20, 35)
+        world_bg_bottom = (25, 30, 45)
+        for y in range(WORLD_HEIGHT):
+            ratio = y / WORLD_HEIGHT
+            color = tuple(int(world_bg_top[i] + (world_bg_bottom[i] - world_bg_top[i]) * ratio) for i in range(3))
+            pygame.draw.line(self.world_surface, color, (0, y), (WORLD_WIDTH, y))
+        
+        # Add subtle stars/particles in background
+        import random
+        random.seed(42)  # Consistent stars
+        for _ in range(100):
+            star_x = random.randint(0, WORLD_WIDTH)
+            star_y = random.randint(0, WORLD_HEIGHT)
+            brightness = random.randint(100, 200)
+            pygame.draw.circle(self.world_surface, (brightness, brightness, brightness + 30), (star_x, star_y), 1)
 
         for food in self.world.food:
             food.draw(self.world_surface)
