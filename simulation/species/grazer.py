@@ -32,7 +32,13 @@ class Grazer(Agent):
             elif in_water and nearest_land:
                 self.move_towards(nearest_land[0], nearest_land[1], speed_multiplier=1.2)
             else:
-                self.move_away(nearest_predator.x, nearest_predator.y, speed_multiplier=1.4)
+                # Occasionally headbutt if brave enough
+                if self.distance_to(nearest_predator) < self.size + nearest_predator.size + 2 and self.bravery > 0.6:
+                    nearest_predator.take_damage(8)
+                    self.metrics["damage_done"] += 8
+                    self.move_away(nearest_predator.x, nearest_predator.y, speed_multiplier=1.2)
+                else:
+                    self.move_away(nearest_predator.x, nearest_predator.y, speed_multiplier=1.4)
         else:
             # Cohesion/dispersion balance
             cohesion = self.dna.genes.get("cohesion", 0.4)

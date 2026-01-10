@@ -44,6 +44,8 @@ class Protector(Agent):
             if pred.alive and self.distance_to(pred) < stun_radius and self.cooldowns.get("stun_ready", 0) == 0:
                 pred.cooldowns["stunned"] = 30
                 pred.cooldowns["slowed"] = 60
+                pred.take_damage(15)
+                self.metrics["damage_done"] += 15
                 self.cooldowns["stun_ready"] = stun_cd
                 self.metrics["stuns"] += 1
                 break

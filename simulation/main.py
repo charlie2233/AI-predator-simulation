@@ -23,7 +23,9 @@ from simulation.config import (
     UI_BG_COLOR,
     UI_TEXT_COLOR,
     UI_BORDER_COLOR,
-    UI_PANEL_BG
+    UI_PANEL_BG,
+    SEA_COLOR,
+    RIVER_COLOR,
 )
 
 
