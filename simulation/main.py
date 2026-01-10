@@ -112,6 +112,8 @@ class Simulation:
                 if actions.get("trait_changed"):
                     self.trait_graph.title = self._current_trait_title()
                     self.trait_graph.update(self.world.populations.get("grazer", []), self._current_trait())
+                if "collapse_mode" in actions:
+                    self.world.collapse_only = actions["collapse_mode"]
                 if actions.get("event_armed"):
                     self.pending_event_type = actions["event_armed"]
                     self.log_panel.push(f"Armed {self.pending_event_type}. Click world to trigger.")

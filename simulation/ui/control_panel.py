@@ -61,6 +61,7 @@ class ControlPanel:
         self.food_spawn_rate = FOOD_RESPAWN_RATE
         self.mutation_strength = MUTATION_SIGMA
         self.obstacles_enabled = False
+        self.collapse_only = True
 
         self.setup_ui()
 
@@ -139,10 +140,13 @@ class ControlPanel:
         self.buttons["export"] = Button(self.rect.x + x_padding + UI_BUTTON_WIDTH + 10, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Export Stats", UI_PANEL_BG)
         self._register("buttons", "export", always=True)
         y += UI_BUTTON_HEIGHT + 20
+        self.buttons["collapse_mode"] = Button(self.rect.x + x_padding, y, UI_BUTTON_WIDTH + 60, UI_BUTTON_HEIGHT, "Mode: Collapse", UI_PANEL_BG)
+        self._register("buttons", "collapse_mode", always=True)
+        y += UI_BUTTON_HEIGHT + 14
 
         # --- Sliders ---
-        self.sliders["speed"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 0.1, 5.0, 1.0, "Sim Speed")
-        self._register("sliders", "speed", tab="World")
+        self.sliders["speed"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 0.1, 5.0, 1.0, "World Speed")
+        self._register("sliders", "speed", always=True)
         y += UI_SLIDER_HEIGHT + 25
         self.sliders["mutation"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 0.01, 0.5, self.mutation_strength, "Mutation σ")
         self._register("sliders", "mutation", tab="Evolution")
@@ -224,6 +228,10 @@ class ControlPanel:
             actions["reset_all"] = True
         if self._button_clicked("export", event):
             actions["export"] = True
+        if self._button_clicked("collapse_mode", event):
+            self.collapse_only = not self.collapse_only
+            self.buttons["collapse_mode"].text = "Mode: Collapse" if self.collapse_only else "Mode: Timed"
+            actions["collapse_mode"] = self.collapse_only
         if self._button_clicked("trait_cycle", event):
             self.trait_index = (self.trait_index + 1) % len(self.trait_options)
             self.labels["trait_label"].set_text(self._trait_label_text())
@@ -255,8 +263,14 @@ class ControlPanel:
         return actions
 
     def update(self, world):
+        self.collapse_only = getattr(world, "collapse_only", self.collapse_only)
+        if "collapse_mode" in self.buttons:
+            self.buttons["collapse_mode"].text = "Mode: Collapse" if self.collapse_only else "Mode: Timed"
         self.labels["generation"].set_text(f"Generation: {world.generation}")
-        self.labels["time_step"].set_text(f"Step: {world.episode_step}/{world.episode_length}")
+        if getattr(world, "collapse_only", False):
+            self.labels["time_step"].set_text(f"Step: {world.episode_step} (collapse)")
+        else:
+            self.labels["time_step"].set_text(f"Step: {world.episode_step}/{world.episode_length}")
         for species, lbl in self.labels["populations"].items():
             lbl.set_text(f"{species.title()}: {len(world.populations.get(species, []))}")
         self.labels["food_count"].set_text(f"Food: {len(world.food)}")
@@ -293,8 +307,9 @@ class ControlPanel:
             else:
                 label.draw(surface, self.font)
                 
-        for lbl in self.labels.get("populations", {}).values():
-            lbl.draw(surface, self.font)
+        if self.active_tab == "World":
+            for lbl in self.labels.get("populations", {}).values():
+                lbl.draw(surface, self.font)
 
         for key, button in self.buttons.items():
             if key.startswith("tab_"):
@@ -332,6 +347,7 @@ class ControlPanel:
             "food_respawn_rate": self.food_spawn_rate,
             "mutation_sigma": self.mutation_strength,
             "obstacles_enabled": self.obstacles_enabled,
+            "collapse_only": self.collapse_only,
         }
 
     # --- Helpers ---

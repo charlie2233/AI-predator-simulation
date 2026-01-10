@@ -44,6 +44,10 @@ from simulation.config import (
     REPRODUCTION_BOOST,
     MAX_AGENTS,
     FOOD_ENERGY_VALUE,
+    COLLAPSE_RESET_ONLY,
+    COLLAPSE_AGENT_FRACTION,
+    COLLAPSE_MIN_AGENTS,
+    COLLAPSE_GRACE_STEPS,
 )
 
 
@@ -71,6 +75,7 @@ class World:
         self.obstacles_enabled = config_overrides.get("obstacles_enabled", OBSTACLES_ENABLED)
         self.initial_counts = dict(INITIAL_SPECIES_COUNTS)
         self.initial_counts.update(config_overrides.get("initial_counts", {}))
+        self.initial_total = sum(self.initial_counts.values())
 
         random.seed(RANDOM_SEED)
 
@@ -82,6 +87,10 @@ class World:
         self.obstacles: List[Tuple[float, float]] = []
         self.archive = Archive()
         self.stats = StatsLogger()
+        self.collapse_only = config_overrides.get("collapse_only", COLLAPSE_RESET_ONLY)
+        self.collapse_fraction = COLLAPSE_AGENT_FRACTION
+        self.collapse_min_agents = COLLAPSE_MIN_AGENTS
+        self.collapse_grace = COLLAPSE_GRACE_STEPS
 
         self.generation = 1
         self.episode_step = 0
@@ -129,28 +138,44 @@ class World:
                 )
 
     def _generate_water_zones(self):
-        """Create simple vertical water/river bands."""
+        """Create meandering sea and river bands with jittered widths."""
         self.water_zones = []
-        band_width = WATER_ZONE_WIDTH
-        self.water_zones = []
-        # Sea along an edge
-        sea_side = random.choice(["left", "right"])
-        sea_x = 0 if sea_side == "left" else max(0, self.width - band_width)
-        self.water_zones.append((sea_x, 0, band_width, WATER_ZONE_HEIGHT, "sea"))
+        base_band = WATER_ZONE_WIDTH
 
-        # Rivers: meandering vertical strips
-        for i in range(max(0, WATER_ZONE_COUNT - 1)):
-            base_x = (i + 1) * self.width / (WATER_ZONE_COUNT + 1)
-            jitter = random.uniform(-band_width * 0.4, band_width * 0.4)
-            x = max(0, min(self.width - band_width, base_x + jitter))
-            # Break river into segments with x jitter to look wavy
-            segments = 10
+        # --- Sea with wavy shoreline ---
+        sea_side = random.choice(["left", "right"])
+        sea_base_x = 0 if sea_side == "left" else max(0, self.width - base_band * 1.6)
+        segments = 14
+        seg_h = WATER_ZONE_HEIGHT / segments
+        cur_x = sea_base_x
+        for s in range(segments):
+            # Wider sea overall, with jitter per segment
+            width = base_band * random.uniform(1.3, 1.8)
+            seg_x = cur_x + random.uniform(-base_band * 0.25, base_band * 0.25)
+            if sea_side == "right":
+                seg_x = max(0, min(self.width - width, seg_x))
+            else:
+                seg_x = max(0, min(self.width - width, seg_x))
+            self.water_zones.append((seg_x, s * seg_h, width, seg_h, "sea"))
+            cur_x = seg_x
+
+        # --- Rivers: meandering strips with width variation and land bridges ---
+        river_count = max(0, WATER_ZONE_COUNT - 1)
+        for i in range(river_count):
+            base_x = (i + 1) * self.width / (river_count + 2)
+            x = max(0, min(self.width - base_band, base_x + random.uniform(-base_band * 0.5, base_band * 0.5)))
+            segments = 12
             segment_h = WATER_ZONE_HEIGHT / segments
             cur_x = x
+            gap_start = random.randint(3, segments - 4)  # leave a bridge
+            gap_len = random.randint(2, 3)
             for s in range(segments):
-                seg_x = cur_x + random.uniform(-band_width * 0.2, band_width * 0.2)
-                seg_x = max(0, min(self.width - band_width, seg_x))
-                self.water_zones.append((seg_x, s * segment_h, band_width, segment_h, "river"))
+                if gap_start <= s < gap_start + gap_len:
+                    continue  # land bridge to avoid full separation
+                width = base_band * random.uniform(0.7, 1.25)
+                seg_x = cur_x + random.uniform(-base_band * 0.35, base_band * 0.35)
+                seg_x = max(0, min(self.width - width, seg_x))
+                self.water_zones.append((seg_x, s * segment_h, width, segment_h, "river"))
                 cur_x = seg_x
 
     def _make_agent(self, species: str, dna: DNA = None):
@@ -206,7 +231,11 @@ class World:
         self._respawn_rocks()
         self._maybe_trigger_event()
 
-        if self.episode_step >= self.episode_length:
+        if self.collapse_only:
+            if self._should_collapse():
+                self.extinction_log.append(f"Gen {self.generation}: auto reset (collapse/extinction)")
+                self.end_episode()
+        elif self.episode_step >= self.episode_length:
             self.end_episode()
 
     def _apply_obstacle_avoidance(self, agent):
@@ -474,6 +503,21 @@ class World:
             self.shelters.append(s)
 
         return True
+
+    def _should_collapse(self) -> bool:
+        """Detect if the run should end due to collapse/extinction."""
+        total_agents = sum(len(v) for v in self.populations.values())
+        extinct = [sp for sp, agents in self.populations.items() if not agents]
+
+        # Allow a short grace period unless extinction already happened
+        if not extinct and self.episode_step < self.collapse_grace:
+            return False
+
+        if extinct:
+            return True
+
+        threshold = max(self.collapse_min_agents, int(self.initial_total * self.collapse_fraction))
+        return total_agents <= threshold
 
     def end_episode(self):
         """Compute fitness, evolve populations, log stats."""

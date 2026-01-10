@@ -35,6 +35,10 @@ MUTATION_SIGMA = 0.15
 TOURNAMENT_SIZE = 3
 MAX_EVENT_CASUALTY_FRACTION = 0.3  # cap per species when disasters hit
 REPRODUCTION_BOOST = 1.2           # multiplier for next-gen child counts
+COLLAPSE_RESET_ONLY = True         # if True, end generation only on collapse/extinction (not on step timer)
+COLLAPSE_AGENT_FRACTION = 0.12     # collapse threshold vs initial agent count
+COLLAPSE_MIN_AGENTS = 12           # hard floor for collapse threshold
+COLLAPSE_GRACE_STEPS = 90          # avoid instant resets at generation start
 
 # Display settings
 WINDOW_WIDTH = 1300
