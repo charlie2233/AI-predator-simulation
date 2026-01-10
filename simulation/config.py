@@ -34,6 +34,7 @@ ARCHIVE_TOP_K = 5
 MUTATION_SIGMA = 0.15
 TOURNAMENT_SIZE = 3
 MAX_EVENT_CASUALTY_FRACTION = 0.3  # cap per species when disasters hit
+REPRODUCTION_BOOST = 1.2           # multiplier for next-gen child counts
 
 # Display settings
 WINDOW_WIDTH = 1300
@@ -89,6 +90,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.5, 1.5),
         'swim_factor': (0.2, 0.6),
         'rock_skill': (0.8, 1.2),
+        'reproduction_factor': (0.9, 1.3),
     },
     'hunter': {
         'speed': (1.2, 4.3),
@@ -102,6 +104,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.6, 1.6),
         'swim_factor': (0.2, 0.6),
         'rock_skill': (0.9, 1.3),
+        'reproduction_factor': (0.8, 1.2),
     },
     'scavenger': {
         'speed': (0.8, 3.3),
@@ -114,6 +117,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.4, 1.4),
         'swim_factor': (0.2, 0.7),
         'rock_skill': (0.8, 1.1),
+        'reproduction_factor': (0.9, 1.2),
     },
     'protector': {
         'speed': (0.8, 3.3),
@@ -127,6 +131,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.5, 1.5),
         'swim_factor': (0.2, 0.6),
         'rock_skill': (1.0, 1.4),
+        'reproduction_factor': (0.8, 1.1),
     },
     'parasite': {
         'speed': (1.0, 3.3),
@@ -140,6 +145,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.3, 1.2),
         'swim_factor': (0.3, 0.8),
         'rock_skill': (0.6, 1.0),
+        'reproduction_factor': (0.9, 1.25),
     },
     'apex': {
         'speed': (1.5, 4.8),
@@ -153,6 +159,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.7, 1.7),
         'swim_factor': (0.2, 0.5),
         'rock_skill': (1.2, 1.6),
+        'reproduction_factor': (0.7, 1.1),
     },
     'sea_hunter': {
         'speed': (1.0, 3.6),
@@ -166,6 +173,7 @@ SPECIES_DNA_RANGES = {
         'metabolism': (0.6, 1.5),
         'swim_factor': (0.8, 1.4),
         'rock_skill': (0.9, 1.2),
+        'reproduction_factor': (0.8, 1.2),
     },
 }
 
@@ -231,4 +239,4 @@ UI_FONT_SIZE = 18
 UI_TITLE_FONT_SIZE = 24
 
 # Simulation settings
-MAX_AGENTS = 500
+MAX_AGENTS = 900

@@ -41,6 +41,9 @@ from simulation.config import (
     SEA_COLOR,
     RIVER_COLOR,
     CLAN_TRAITS,
+    REPRODUCTION_BOOST,
+    MAX_AGENTS,
+    FOOD_ENERGY_VALUE,
 )
 
 
@@ -129,13 +132,26 @@ class World:
         """Create simple vertical water/river bands."""
         self.water_zones = []
         band_width = WATER_ZONE_WIDTH
-        for i in range(WATER_ZONE_COUNT):
-            # Evenly spaced random offsets
+        self.water_zones = []
+        # Sea along an edge
+        sea_side = random.choice(["left", "right"])
+        sea_x = 0 if sea_side == "left" else max(0, self.width - band_width)
+        self.water_zones.append((sea_x, 0, band_width, WATER_ZONE_HEIGHT, "sea"))
+
+        # Rivers: meandering vertical strips
+        for i in range(max(0, WATER_ZONE_COUNT - 1)):
             base_x = (i + 1) * self.width / (WATER_ZONE_COUNT + 1)
-            jitter = random.uniform(-band_width * 0.5, band_width * 0.5)
+            jitter = random.uniform(-band_width * 0.4, band_width * 0.4)
             x = max(0, min(self.width - band_width, base_x + jitter))
-            zone_type = "sea" if i == 0 else "river"
-            self.water_zones.append((x, 0, band_width, WATER_ZONE_HEIGHT, zone_type))
+            # Break river into segments with x jitter to look wavy
+            segments = 10
+            segment_h = WATER_ZONE_HEIGHT / segments
+            cur_x = x
+            for s in range(segments):
+                seg_x = cur_x + random.uniform(-band_width * 0.2, band_width * 0.2)
+                seg_x = max(0, min(self.width - band_width, seg_x))
+                self.water_zones.append((seg_x, s * segment_h, band_width, segment_h, "river"))
+                cur_x = seg_x
 
     def _make_agent(self, species: str, dna: DNA = None):
         klass = SPECIES_CLASS[species]
@@ -469,19 +485,23 @@ class World:
             klass = SPECIES_CLASS[species]
             scored = []
             if agents:
+                repro_vals = []
                 for agent in agents:
                     fitness = klass.fitness(agent)
                     scored.append((fitness, agent.dna))
+                    repro_vals.append(agent.dna.genes.get("reproduction_factor", 1.0))
                 scored_per_species[species] = scored
                 # Mean dna
                 if scored:
                     mean_dna[species] = {
                         gene: sum(a.dna.genes[gene] for a in agents) / len(agents) for gene in agents[0].dna.genes.keys()
                     }
+                    mean_dna[species]["reproduction_factor"] = sum(repro_vals) / max(1, len(repro_vals))
             else:
                 extinctions.append(species)
                 scored_per_species[species] = []
                 mean_dna[species] = {gene: 0 for gene in SPECIES_DNA_RANGES[species].keys()}
+                mean_dna[species]["reproduction_factor"] = 1.0
 
             # Archive update
             self.archive.add_generation(species, scored)
@@ -498,19 +518,25 @@ class World:
 
         # Build next generation
         new_populations: Dict[str, List] = {name: [] for name in SPECIES_CLASS.keys()}
+        per_species_cap = max(4, MAX_AGENTS // max(1, len(SPECIES_CLASS)))
         for species, target_count in self.initial_counts.items():
             scored = scored_per_species.get(species, [])
             selected = tournament_selection(scored, max(2, target_count // 2))
-            children_dna = reproduce(selected, target_count, sigma=self.mutation_sigma)
+            repro_factor = mean_dna.get(species, {}).get("reproduction_factor", 1.0) or 1.0
+            repro_factor = max(0.5, min(1.6, repro_factor))
+            boosted = int(target_count * REPRODUCTION_BOOST * repro_factor)
+            boosted = max(2, boosted)
+            boosted = min(boosted, per_species_cap, target_count * 3)
+            children_dna = reproduce(selected, boosted, sigma=self.mutation_sigma)
 
             # Extinction recovery
             if not children_dna:
-                archived = self.archive.sample(species, target_count, sigma_boost=2.0)
+                archived = self.archive.sample(species, boosted, sigma_boost=2.0)
                 if archived:
                     children_dna = archived
             if not children_dna:
                 # Fallback random
-                children_dna = [self._random_dna(species) for _ in range(target_count)]
+                children_dna = [self._random_dna(species) for _ in range(boosted)]
 
             new_populations[species] = [self._make_agent(species, dna) for dna in children_dna]
 
