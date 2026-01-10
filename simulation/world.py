@@ -2,6 +2,8 @@
 World environment and generational evolution.
 """
 import random
+import json
+import os
 from typing import Dict, List, Tuple
 
 from simulation.agents.food import Food, PlantFood, random_food
@@ -93,6 +95,7 @@ class World:
 
         self._generate_water_zones()
         self.spawn_initial_population()
+        self.save_path = config_overrides.get("save_path")
 
     def spawn_initial_population(self):
         """Create initial agents and food."""
@@ -360,6 +363,102 @@ class World:
         """Trigger a targeted event at a world position."""
         self._apply_event(event_type, center=position, radius=radius)
 
+    # --- Persistence ---
+    def save_state(self, path: str):
+        """Save current world to disk as JSON."""
+        data = {
+            "width": self.width,
+            "height": self.height,
+            "generation": self.generation,
+            "episode_step": self.episode_step,
+            "initial_counts": self.initial_counts,
+            "food_respawn_rate": self.food_respawn_rate,
+            "mutation_sigma": self.mutation_sigma,
+            "water_zones": self.water_zones,
+            "populations": [],
+            "food": [],
+            "rocks": [],
+            "shelters": [],
+        }
+        for species, agents in self.populations.items():
+            for agent in agents:
+                data["populations"].append({
+                    "species": species,
+                    "clan": agent.clan,
+                    "x": agent.x,
+                    "y": agent.y,
+                    "energy": agent.energy,
+                    "max_energy": agent.max_energy,
+                    "age": agent.age,
+                    "dna": agent.dna.genes,
+                })
+        for f in self.food:
+            data["food"].append({
+                "x": f.x,
+                "y": f.y,
+                "energy": f.energy_value,
+                "size": f.size,
+                "is_carcass": getattr(f, "is_carcass", False),
+                "is_tree": isinstance(f, PlantFood),
+            })
+        for r in self.rocks:
+            data["rocks"].append({"x": r.x, "y": r.y, "size": r.size, "alive": getattr(r, "alive", True)})
+        for s in self.shelters:
+            data["shelters"].append({"x": s.x, "y": s.y, "radius": s.radius, "alive": getattr(s, "alive", True)})
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+    def load_state(self, path: str):
+        """Load world state from JSON file."""
+        if not os.path.exists(path):
+            return False
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        self.width = data.get("width", self.width)
+        self.height = data.get("height", self.height)
+        self.generation = data.get("generation", 1)
+        self.episode_step = data.get("episode_step", 0)
+        self.initial_counts = data.get("initial_counts", self.initial_counts)
+        self.food_respawn_rate = data.get("food_respawn_rate", self.food_respawn_rate)
+        self.mutation_sigma = data.get("mutation_sigma", self.mutation_sigma)
+        self.water_zones = data.get("water_zones", [])
+
+        self.populations = {name: [] for name in SPECIES_CLASS.keys()}
+        for item in data.get("populations", []):
+            species = item["species"]
+            clan = item.get("clan", 0)
+            dna = DNA(item.get("dna", {}), SPECIES_DNA_RANGES.get(species, {}))
+            agent = SPECIES_CLASS[species](item["x"], item["y"], self.width, self.height, dna, species=species, clan=clan)
+            agent.energy = item.get("energy", agent.energy)
+            agent.max_energy = item.get("max_energy", agent.max_energy)
+            agent.age = item.get("age", 0)
+            self.populations[species].append(agent)
+
+        self.food = []
+        for item in data.get("food", []):
+            if item.get("is_tree"):
+                fobj = PlantFood(item["x"], item["y"], size=item.get("size"))
+            else:
+                fobj = Food(item["x"], item["y"], energy_value=item.get("energy", FOOD_ENERGY_VALUE),
+                            is_carcass=item.get("is_carcass", False), size=item.get("size"))
+            self.food.append(fobj)
+
+        self.rocks = []
+        for item in data.get("rocks", []):
+            r = Rock(item["x"], item["y"], size=item.get("size", 8))
+            r.alive = item.get("alive", True)
+            self.rocks.append(r)
+
+        self.shelters = []
+        for item in data.get("shelters", []):
+            s = Shelter(item["x"], item["y"], radius=item.get("radius", SHELTER_RADIUS))
+            s.alive = item.get("alive", True)
+            self.shelters.append(s)
+
+        return True
+
     def end_episode(self):
         """Compute fitness, evolve populations, log stats."""
         scored_per_species: Dict[str, List[tuple]] = {}
@@ -425,6 +524,8 @@ class World:
 
         self.episode_step = 0
         self.generation += 1
+        if self.save_path:
+            self.save_state(self.save_path)
 
     def _random_dna(self, species: str) -> DNA:
         ranges = SPECIES_DNA_RANGES[species]
@@ -442,6 +543,9 @@ class World:
         # Preserve history across resets if desired, or not?
         # User wants "how many times have this game started". I should probably preserve it if this is just "Reset All" button in the same session.
         history = self.run_history
+        # Keep save path when resetting
+        save_path = self.save_path
+        config_overrides["save_path"] = save_path
         self.__init__(self.width, self.height, config_overrides)
         self.run_history["starts"] = history["starts"] + 1
         self.run_history["extinctions"] = history["extinctions"]

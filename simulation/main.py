@@ -37,7 +37,8 @@ class Simulation:
 
         self.world_surface = pygame.Surface((WORLD_WIDTH, WORLD_HEIGHT))
         self.clock = pygame.time.Clock()
-        self.world = World(WORLD_WIDTH, WORLD_HEIGHT)
+        self.save_path = os.path.join(os.getcwd(), "saves", "latest.json")
+        self.world = World(WORLD_WIDTH, WORLD_HEIGHT, {"save_path": self.save_path})
 
         self.viewport_width = WINDOW_WIDTH - STATS_PANEL_WIDTH
         
@@ -59,6 +60,7 @@ class Simulation:
         self.viewport_width = WINDOW_WIDTH - STATS_PANEL_WIDTH
         self.zoom = 0.6
         self.camera_offset = [0, 0]
+        self.has_save = os.path.exists(self.save_path)
 
         cx = self.viewport_width // 2
         cy = WINDOW_HEIGHT // 2
@@ -277,9 +279,10 @@ class Simulation:
                 if name == "start":
                     self._start_new_world()
                 elif name == "continue":
-                    self.scene = "play"
-                    self.paused = False
-                    self.started = True
+                    if self._load_save():
+                        self.scene = "play"
+                        self.paused = False
+                        self.started = True
                 elif name == "credits":
                     self.show_credits = not self.show_credits
 
@@ -291,6 +294,7 @@ class Simulation:
         self.paused = False
         self.started = True
         self.show_credits = False
+        self.has_save = True
 
     def _draw_menu(self):
         overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
@@ -309,6 +313,13 @@ class Simulation:
         overlay.blit(subtitle, (cx - subtitle.get_width() // 2, cy - 110))
         
         for btn in self.menu_buttons.values():
+            if btn.text == "Continue" and not self.has_save:
+                # Dim continue if no save
+                btn.color = UI_PANEL_BG
+                btn.text_color = (130, 130, 130)
+            else:
+                btn.color = UI_PANEL_BG
+                btn.text_color = UI_TEXT_COLOR
             btn.draw(overlay, text_font)
             
         if self.show_credits:
@@ -341,7 +352,7 @@ class Simulation:
         
         cx = self.viewport_width // 2
         cy = 100
-        
+
         shadow_rect = shadow.get_rect(center=(cx + 2, cy + 2))
         fg_rect = fg.get_rect(center=(cx, cy))
         
@@ -359,6 +370,14 @@ class Simulation:
         if self.world.episode_step == 0 and self.prev_episode_step > 0:
             self.population_graph.add_reset_mark()
         self.prev_episode_step = self.world.episode_step
+
+    def _load_save(self):
+        loaded = self.world.load_state(self.save_path)
+        self.has_save = loaded
+        if loaded:
+            self.zoom = 0.6
+            self.camera_offset = [0, 0]
+        return loaded
 
 
 def main():
