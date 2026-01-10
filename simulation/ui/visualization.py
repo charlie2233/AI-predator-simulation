@@ -3,7 +3,11 @@ Visualization components for statistics and graphs.
 """
 import pygame
 from collections import deque
-from simulation.config import WHITE, DARK_GRAY, SPECIES_STYLE
+from simulation.config import (
+    WHITE, DARK_GRAY, SPECIES_STYLE,
+    UI_BG_COLOR, UI_PANEL_BG, UI_TEXT_COLOR, UI_BORDER_COLOR,
+    UI_ACCENT_COLOR, ORANGE
+)
 
 
 class PopulationGraph:
@@ -25,95 +29,107 @@ class PopulationGraph:
     def draw(self, surface):
         if not self.font:
             self.font = pygame.font.Font(None, 16)
-        pygame.draw.rect(surface, DARK_GRAY, self.rect)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
-        title = self.font.render("Population History", True, WHITE)
-        surface.blit(title, (self.rect.x + 5, self.rect.y + 5))
+            
+        # Background
+        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=8)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=8)
+        
+        title = self.font.render("Population History", True, UI_TEXT_COLOR)
+        surface.blit(title, (self.rect.x + 10, self.rect.y + 8))
+        
         if not self.history or len(next(iter(self.history.values()))) < 2:
             return
-        max_val = max(max(max(hist) if hist else [1]) for hist in self.history.values())
-        max_val = max(max_val, max(self.food_history) if self.food_history else 1, 10)
+            
+        # Safe max to avoid int/list mix
+        series_max = 1
+        for hist in self.history.values():
+            if hist:
+                series_max = max(series_max, max(hist))
+        food_max = max(self.food_history) if self.food_history else 1
+        max_val = max(series_max, food_max, 10)
+        
+        # Grid lines
         for i in range(5):
-            y = self.rect.y + 25 + (self.rect.height - 30) * i // 4
-            pygame.draw.line(surface, (80, 80, 80), (self.rect.x + 5, y), (self.rect.right - 5, y), 1)
-            label = self.font.render(str(int(max_val * (4 - i) / 4)), True, WHITE)
-            surface.blit(label, (self.rect.x + 5, y - 8))
+            y = self.rect.y + 30 + (self.rect.height - 40) * i // 4
+            pygame.draw.line(surface, (60, 60, 70), (self.rect.x + 5, y), (self.rect.right - 5, y), 1)
+            label = self.font.render(str(int(max_val * (4 - i) / 4)), True, (150, 150, 160))
+            surface.blit(label, (self.rect.x + 8, y - 8))
+            
+        # Draw lines
         for name, hist in self.history.items():
             color = SPECIES_STYLE.get(name, {}).get("color", WHITE)
             self.draw_line(surface, hist, max_val, color)
-        self.draw_line(surface, self.food_history, max_val, (200, 200, 50))
+        self.draw_line(surface, self.food_history, max_val, ORANGE)
+        
+        # Legend
         legend_y = self.rect.bottom - 20
         offset = 0
+        start_x = self.rect.x + 60
+        
         for name in self.species_names:
             color = SPECIES_STYLE.get(name, {}).get("color", WHITE)
-            self.draw_legend_item(surface, self.rect.x + 60 + offset, legend_y, color, name.title())
-            offset += 90
-        self.draw_legend_item(surface, self.rect.x + 60 + offset, legend_y, (200, 200, 50), "Food")
+            self.draw_legend_item(surface, start_x + offset, legend_y, color, name.title())
+            offset += 75
+            
+        self.draw_legend_item(surface, start_x + offset, legend_y, ORANGE, "Food")
     
     def draw_line(self, surface, history, max_val, color):
         if len(history) < 2:
             return
         points = []
-        graph_height = self.rect.height - 30
-        graph_width = self.rect.width - 10
+        graph_height = self.rect.height - 40
+        graph_width = self.rect.width - 20
+        
         for i, value in enumerate(history):
-            x = self.rect.x + 5 + (i * graph_width) // self.max_history
-            y = self.rect.y + 25 + graph_height - int((value / max_val) * graph_height)
+            x = self.rect.x + 10 + (i * graph_width) // self.max_history
+            y = self.rect.y + 30 + graph_height - int((value / max_val) * graph_height)
             points.append((x, y))
+            
         if len(points) > 1:
             pygame.draw.lines(surface, color, False, points, 2)
     
     def draw_legend_item(self, surface, x, y, color, text):
-        pygame.draw.rect(surface, color, (x, y, 10, 10))
-        label = self.font.render(text, True, WHITE)
-        surface.blit(label, (x + 15, y - 2))
+        pygame.draw.circle(surface, color, (x + 5, y + 5), 4)
+        label = self.font.render(text, True, UI_TEXT_COLOR)
+        surface.blit(label, (x + 12, y - 2))
 
 
 class TraitGraph:
     """Graph for displaying evolution of traits."""
     
     def __init__(self, x, y, width, height, title="Trait Evolution"):
-        """
-        Initialize trait graph.
-        
-        Args:
-            x: X position
-            y: Y position
-            width: Graph width
-            height: Graph height
-            title: Graph title
-        """
         self.rect = pygame.Rect(x, y, width, height)
         self.title = title
         self.font = None
         
         self.trait_data = {}
+        # Using the same pastel palette for traits roughly
         self.colors = {
-            'speed': (100, 200, 255),
-            'vision': (255, 200, 100),
-            'energy_efficiency': (200, 100, 255),
-            'size': (100, 255, 200)
+            'speed': (139, 233, 253), # Cyan
+            'vision': (255, 184, 108), # Orange
+            'energy_efficiency': (189, 147, 249), # Purple
+            'size': (80, 250, 123) # Green
         }
     
     def update(self, agents, trait_name):
-        """
-        Update trait distribution data.
-        
-        Args:
-            agents: List of agents
-            trait_name: Name of trait to display
-        """
         if not agents:
             self.trait_data = {}
             return
         
         # Collect trait values
-        values = [getattr(agent.traits, trait_name) for agent in agents]
+        values = []
+        for agent in agents:
+            dna_val = agent.dna.genes.get(trait_name)
+            if dna_val is not None:
+                values.append(dna_val)
+        if not values:
+            self.trait_data = {}
+            return
         
         # Create histogram bins
         min_val = min(values)
         max_val = max(values)
-        num_bins = 10
+        num_bins = 15 # More resolution
         
         if max_val - min_val < 0.01:
             self.trait_data = {}
@@ -134,22 +150,16 @@ class TraitGraph:
         }
     
     def draw(self, surface):
-        """
-        Draw the trait graph.
-        
-        Args:
-            surface: Pygame surface
-        """
         if not self.font:
             self.font = pygame.font.Font(None, 16)
         
         # Draw background
-        pygame.draw.rect(surface, DARK_GRAY, self.rect)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
+        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=8)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=8)
         
         # Draw title
-        title = self.font.render(self.title, True, WHITE)
-        surface.blit(title, (self.rect.x + 5, self.rect.y + 5))
+        title = self.font.render(self.title, True, UI_TEXT_COLOR)
+        surface.blit(title, (self.rect.x + 10, self.rect.y + 8))
         
         if not self.trait_data:
             return
@@ -158,22 +168,27 @@ class TraitGraph:
         max_count = max(bins) if bins else 1
         
         # Draw histogram bars
-        bar_width = (self.rect.width - 20) // len(bins)
+        # width minus padding
+        graph_width = self.rect.width - 20
+        bar_width = graph_width // len(bins)
+        
         for i, count in enumerate(bins):
             if count > 0:
-                bar_height = int((count / max_count) * (self.rect.height - 40))
+                bar_height = int((count / max_count) * (self.rect.height - 50))
                 bar_x = self.rect.x + 10 + i * bar_width
-                bar_y = self.rect.bottom - 10 - bar_height
+                bar_y = self.rect.bottom - 20 - bar_height
                 
-                color = self.colors.get(self.trait_data['trait'], WHITE)
-                pygame.draw.rect(surface, color, 
-                               (bar_x, bar_y, bar_width - 2, bar_height))
+                color = self.colors.get(self.trait_data['trait'], UI_ACCENT_COLOR)
+                
+                # Bar with rounded top
+                bar_rect = pygame.Rect(bar_x, bar_y, bar_width - 1, bar_height)
+                pygame.draw.rect(surface, color, bar_rect, border_top_left_radius=3, border_top_right_radius=3)
         
         # Draw axis labels
-        min_label = self.font.render(f"{self.trait_data['min']:.1f}", True, WHITE)
-        max_label = self.font.render(f"{self.trait_data['max']:.1f}", True, WHITE)
-        surface.blit(min_label, (self.rect.x + 10, self.rect.bottom - 25))
-        surface.blit(max_label, (self.rect.right - 40, self.rect.bottom - 25))
+        min_label = self.font.render(f"{self.trait_data['min']:.1f}", True, (150, 150, 160))
+        max_label = self.font.render(f"{self.trait_data['max']:.1f}", True, (150, 150, 160))
+        surface.blit(min_label, (self.rect.x + 10, self.rect.bottom - 18))
+        surface.blit(max_label, (self.rect.right - 30, self.rect.bottom - 18))
 
 
 class LogPanel:
@@ -191,10 +206,22 @@ class LogPanel:
     def draw(self, surface):
         if not self.font:
             self.font = pygame.font.Font(None, 16)
-        pygame.draw.rect(surface, DARK_GRAY, self.rect)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
-        title = self.font.render("Events", True, WHITE)
-        surface.blit(title, (self.rect.x + 5, self.rect.y + 5))
+        
+        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=8)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=8)
+        
+        title = self.font.render("Events Log", True, UI_ACCENT_COLOR)
+        surface.blit(title, (self.rect.x + 10, self.rect.y + 8))
+        
         for i, line in enumerate(self.lines):
-            txt = self.font.render(line, True, WHITE)
-            surface.blit(txt, (self.rect.x + 5, self.rect.y + 25 + i * 16))
+            # Fade out older lines
+            alpha = 255 - (i * 30)
+            if alpha < 0: alpha = 0
+            
+            # Since we can't easily alpha text in pygame without surfaces, we'll just use color
+            color = UI_TEXT_COLOR
+            if i > 2:
+                color = (150, 150, 160)
+            
+            txt = self.font.render(line, True, color)
+            surface.blit(txt, (self.rect.x + 10, self.rect.y + 30 + i * 16))

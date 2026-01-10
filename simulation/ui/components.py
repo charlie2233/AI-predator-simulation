@@ -5,7 +5,9 @@ import pygame
 from simulation.config import (
     WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
     UI_PADDING, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT,
-    UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, UI_FONT_SIZE
+    UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, UI_FONT_SIZE,
+    UI_PANEL_BG, UI_TEXT_COLOR, UI_ACCENT_COLOR, UI_HOVER_COLOR,
+    UI_BORDER_COLOR, UI_BG_COLOR
 )
 import pygame.locals as pl
 
@@ -13,7 +15,7 @@ import pygame.locals as pl
 class Button:
     """Clickable button UI element."""
     
-    def __init__(self, x, y, width, height, text, color=GRAY, text_color=WHITE):
+    def __init__(self, x, y, width, height, text, color=UI_PANEL_BG, text_color=UI_TEXT_COLOR):
         """
         Initialize button.
         
@@ -30,7 +32,7 @@ class Button:
         self.text = text
         self.color = color
         self.text_color = text_color
-        self.hover_color = tuple(min(255, c + 30) for c in color)
+        self.hover_color = UI_HOVER_COLOR
         self.is_hovered = False
     
     def handle_event(self, event):
@@ -59,10 +61,19 @@ class Button:
             font: Pygame font
         """
         color = self.hover_color if self.is_hovered else self.color
-        pygame.draw.rect(surface, color, self.rect)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
         
-        text_surface = font.render(self.text, True, self.text_color)
+        # Rounded background
+        pygame.draw.rect(surface, color, self.rect, border_radius=8)
+        
+        # Border
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2, border_radius=8)
+        
+        # Text shadow for better readability
+        shadow_surface = font.render(self.text, True, (0, 0, 0))
+        shadow_rect = shadow_surface.get_rect(center=(self.rect.centerx + 1, self.rect.centery + 1))
+        surface.blit(shadow_surface, shadow_rect)
+
+        text_surface = font.render(self.text, True, self.text_color if not self.is_hovered else (40, 42, 54))
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
 
@@ -92,7 +103,7 @@ class Slider:
         self.dragging = False
         
         # Handle slider position
-        self.handle_radius = height // 2 + 2
+        self.handle_radius = height // 2 + 4
         self.update_handle_pos()
     
     def update_handle_pos(self):
@@ -149,27 +160,26 @@ class Slider:
             font: Pygame font
         """
         # Draw label
-        label_surface = font.render(f"{self.label}: {self.value:.1f}", True, WHITE)
+        label_surface = font.render(f"{self.label}: {self.value:.1f}", True, UI_TEXT_COLOR)
         surface.blit(label_surface, (self.rect.x, self.rect.y - 20))
         
         # Draw track
-        pygame.draw.rect(surface, DARK_GRAY, self.rect)
-        pygame.draw.rect(surface, LIGHT_GRAY, self.rect, 2)
+        pygame.draw.rect(surface, UI_PANEL_BG, self.rect, border_radius=4)
         
         # Draw filled portion
         filled_width = int((self.value - self.min_val) / (self.max_val - self.min_val) * self.rect.width)
         filled_rect = pygame.Rect(self.rect.x, self.rect.y, filled_width, self.rect.height)
-        pygame.draw.rect(surface, GRAY, filled_rect)
+        pygame.draw.rect(surface, UI_ACCENT_COLOR, filled_rect, border_radius=4)
         
         # Draw handle
-        pygame.draw.circle(surface, WHITE, (self.handle_x, self.handle_y), self.handle_radius)
-        pygame.draw.circle(surface, LIGHT_GRAY, (self.handle_x, self.handle_y), self.handle_radius - 2)
+        pygame.draw.circle(surface, UI_TEXT_COLOR, (self.handle_x, self.handle_y), self.handle_radius)
+        pygame.draw.circle(surface, UI_PANEL_BG, (self.handle_x, self.handle_y), self.handle_radius - 2)
 
 
 class Label:
     """Text label UI element."""
     
-    def __init__(self, x, y, text, color=WHITE, font_size=UI_FONT_SIZE):
+    def __init__(self, x, y, text, color=UI_TEXT_COLOR, font_size=UI_FONT_SIZE):
         """
         Initialize label.
         
@@ -235,12 +245,14 @@ class NumericInput:
             self.text = str(self.value)
 
     def draw(self, surface, font):
-        if self.active:
-            pygame.draw.rect(surface, LIGHT_GRAY, self.rect)
-        else:
-            pygame.draw.rect(surface, DARK_GRAY, self.rect)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
-        label_surface = font.render(f"{self.label}: {self.value}", True, WHITE)
+        color = UI_ACCENT_COLOR if self.active else UI_PANEL_BG
+        
+        pygame.draw.rect(surface, color, self.rect, border_radius=4)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 1, border_radius=4)
+        
+        label_surface = font.render(f"{self.label}: {self.value}", True, UI_TEXT_COLOR)
         surface.blit(label_surface, (self.rect.x, self.rect.y - 18))
-        text_surface = font.render(self.text, True, WHITE)
+        
+        text_color = BLACK if self.active else UI_TEXT_COLOR
+        text_surface = font.render(self.text, True, text_color)
         surface.blit(text_surface, (self.rect.x + 4, self.rect.y + 4))

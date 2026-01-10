@@ -25,7 +25,12 @@ class Grazer(Agent):
 
         nearest_predator = self.find_nearest(predators)
         if nearest_predator and self.distance_to(nearest_predator) < self.vision:
-            self.move_away(nearest_predator.x, nearest_predator.y, speed_multiplier=1.4)
+            # Head toward shelter if one is near, else flee and push rocks along the way
+            shelter = self.find_nearest(shelters, max_distance=self.vision)
+            if shelter:
+                self.move_towards(shelter.x, shelter.y, speed_multiplier=1.1)
+            else:
+                self.move_away(nearest_predator.x, nearest_predator.y, speed_multiplier=1.4)
         else:
             # Cohesion/dispersion balance
             cohesion = self.dna.genes.get("cohesion", 0.4)

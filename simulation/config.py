@@ -6,8 +6,8 @@ Configuration settings for the predator-prey simulation.
 RANDOM_SEED = 42
 
 # World settings (can be overridden from control panel on reset)
-WORLD_WIDTH = 800
-WORLD_HEIGHT = 600
+WORLD_WIDTH = 1800
+WORLD_HEIGHT = 1200
 GRID_SIZE = 10
 OBSTACLES_ENABLED = False
 OBSTACLE_COUNT = 4
@@ -29,16 +29,28 @@ WINDOW_HEIGHT = 760
 FPS = 60
 STATS_PANEL_WIDTH = 450
 
-# Colors
+# Colors (Dracula / Pastel Theme)
 BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-YELLOW = (255, 255, 0)
-GRAY = (128, 128, 128)
-DARK_GRAY = (64, 64, 64)
-LIGHT_GRAY = (192, 192, 192)
+WHITE = (248, 248, 242)  # Off-white
+GREEN = (80, 250, 123)
+RED = (255, 85, 85)
+BLUE = (98, 114, 164)
+YELLOW = (241, 250, 140)
+GRAY = (68, 71, 90)
+DARK_GRAY = (40, 42, 54)  # Background
+LIGHT_GRAY = (98, 114, 164) # Comments/Selection
+CYAN = (139, 233, 253)
+PINK = (255, 121, 198)
+PURPLE = (189, 147, 249)
+ORANGE = (255, 184, 108)
+
+# UI Theme
+UI_BG_COLOR = (40, 42, 54)       # Dark background
+UI_PANEL_BG = (68, 71, 90)       # Panel background
+UI_TEXT_COLOR = (248, 248, 242)
+UI_ACCENT_COLOR = (189, 147, 249) # Purple accent
+UI_HOVER_COLOR = (255, 121, 198)  # Pink hover
+UI_BORDER_COLOR = (98, 114, 164)
 
 # Species initial counts (overridable via control panel)
 INITIAL_SPECIES_COUNTS = {
@@ -52,52 +64,57 @@ INITIAL_SPECIES_COUNTS = {
 # DNA ranges per species (min, max) used for mutation clamping
 SPECIES_DNA_RANGES = {
     'grazer': {
-        'speed': (0.6, 3.8),
-        'vision': (60, 200),
-        'size': (3, 8),
+        'speed': (0.6, 3.6),
+        'vision': (70, 220),
+        'size': (5, 11),
         'energy_efficiency': (0.6, 2.2),
         'cohesion': (0.0, 1.0),
         'dispersion': (0.0, 1.0),
+        'carry_capacity': (8, 18),
     },
     'hunter': {
-        'speed': (1.2, 4.5),
-        'vision': (80, 240),
-        'size': (4, 9),
+        'speed': (1.2, 4.3),
+        'vision': (90, 250),
+        'size': (6, 11),
         'energy_efficiency': (0.5, 1.8),
-        'attack_range': (4, 12),
+        'attack_range': (5, 13),
+        'carry_capacity': (10, 20),
     },
     'scavenger': {
-        'speed': (0.8, 3.5),
-        'vision': (80, 220),
-        'size': (3, 7),
+        'speed': (0.8, 3.3),
+        'vision': (90, 230),
+        'size': (5, 10),
         'energy_efficiency': (0.8, 2.5),
         'carcass_affinity': (0.5, 2.0),
+        'carry_capacity': (8, 16),
     },
     'protector': {
-        'speed': (0.8, 3.5),
-        'vision': (90, 220),
-        'size': (4, 8),
+        'speed': (0.8, 3.3),
+        'vision': (100, 240),
+        'size': (6, 10),
         'energy_efficiency': (0.7, 2.0),
-        'stun_radius': (20, 60),
+        'stun_radius': (26, 70),
         'stun_cooldown': (60, 240),
+        'carry_capacity': (12, 22),
     },
     'parasite': {
-        'speed': (1.0, 3.5),
-        'vision': (80, 220),
-        'size': (2, 5),
+        'speed': (1.0, 3.3),
+        'vision': (90, 230),
+        'size': (4, 8),
         'energy_efficiency': (0.9, 2.5),
         'drain_rate': (0.4, 2.0),
         'attach_time': (80, 200),
+        'carry_capacity': (6, 14),
     },
 }
 
 # Visual identity
 SPECIES_STYLE = {
-    'grazer': {'color': (140, 225, 160), 'shape': 'circle'},
-    'hunter': {'color': (245, 145, 145), 'shape': 'triangle'},
-    'scavenger': {'color': (215, 180, 150), 'shape': 'square'},
-    'protector': {'color': (160, 195, 255), 'shape': 'diamond'},
-    'parasite': {'color': (220, 150, 245), 'shape': 'hex'},
+    'grazer': {'color': (80, 250, 123), 'shape': 'circle'},      # Green
+    'hunter': {'color': (255, 85, 85), 'shape': 'triangle'},     # Red
+    'scavenger': {'color': (255, 184, 108), 'shape': 'square'},  # Orange
+    'protector': {'color': (139, 233, 253), 'shape': 'diamond'}, # Cyan
+    'parasite': {'color': (189, 147, 249), 'shape': 'hex'},      # Purple
 }
 CLAN_ACCENTS = [
     (255, 255, 255),
@@ -106,11 +123,13 @@ CLAN_ACCENTS = [
 ]
 
 # Food settings
-FOOD_COUNT = 90
-FOOD_SIZE = 3
-FOOD_ENERGY_VALUE = 30
-FOOD_RESPAWN_RATE = 0.025  # Probability per frame
-CARCASS_ENERGY_VALUE = 50
+FOOD_COUNT = 200
+FOOD_SIZE = 6
+FOOD_ENERGY_VALUE = 35
+FOOD_RESPAWN_RATE = 0.03  # Probability per frame
+CARCASS_ENERGY_VALUE = 55
+FOOD_COLOR = (139, 233, 145)   # Soft Green
+CARCASS_COLOR = (255, 184, 108) # Soft Orange/Brown
 
 # Random events (per-step probability per type)
 EVENT_PROBABILITIES = {
@@ -126,12 +145,12 @@ EVENT_SEVERITY = {
 
 # UI settings
 UI_PADDING = 10
-UI_SLIDER_WIDTH = 150
-UI_SLIDER_HEIGHT = 20
-UI_BUTTON_WIDTH = 100
-UI_BUTTON_HEIGHT = 30
-UI_FONT_SIZE = 16
-UI_TITLE_FONT_SIZE = 20
+UI_SLIDER_WIDTH = 170
+UI_SLIDER_HEIGHT = 26
+UI_BUTTON_WIDTH = 120
+UI_BUTTON_HEIGHT = 36
+UI_FONT_SIZE = 18
+UI_TITLE_FONT_SIZE = 24
 
 # Simulation settings
 MAX_AGENTS = 500

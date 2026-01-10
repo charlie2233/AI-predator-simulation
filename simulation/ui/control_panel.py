@@ -20,6 +20,11 @@ from simulation.config import (
     WORLD_HEIGHT,
     FOOD_RESPAWN_RATE,
     MUTATION_SIGMA,
+    UI_BG_COLOR,
+    UI_PANEL_BG,
+    UI_TEXT_COLOR,
+    UI_BORDER_COLOR,
+    UI_ACCENT_COLOR
 )
 
 
@@ -56,78 +61,108 @@ class ControlPanel:
         self.setup_ui()
 
     def setup_ui(self):
-        x = self.rect.x + UI_PADDING
-        y = self.rect.y + UI_PADDING + 20
+        # Clear existing UI elements if re-initializing
+        self.buttons = {}
+        self.sliders = {}
+        self.labels = {}
+        self.inputs = {}
 
-        self.labels["title"] = Label(x, self.rect.y + UI_PADDING, "Control Panel", WHITE, UI_TITLE_FONT_SIZE)
+        x_padding = UI_PADDING + 10
+        y_start = self.rect.y + UI_PADDING + 10
+        
+        # --- Title ---
+        self.labels["title"] = Label(self.rect.x + x_padding, y_start, "Control Panel", UI_ACCENT_COLOR, UI_TITLE_FONT_SIZE + 4)
+        y = y_start + 40
 
-        # Control buttons
-        self.buttons["pause"] = Button(x, y, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, "Pause", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-        self.buttons["reset_gen"] = Button(x, y, UI_BUTTON_WIDTH + 40, UI_BUTTON_HEIGHT, "Reset Generation", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-        self.buttons["reset_all"] = Button(x, y, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, "Reset All", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-        self.buttons["export"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Export Stats", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-
-        # Toggles and sliders
-        self.sliders["speed"] = Slider(x, y, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT, 0.1, 5.0, 1.0, "Speed")
-        y += UI_SLIDER_HEIGHT + UI_PADDING
-        self.sliders["mutation"] = Slider(x, y, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT, 0.01, 0.5, self.mutation_strength, "Mutation σ")
-        y += UI_SLIDER_HEIGHT + UI_PADDING
-        self.sliders["episode"] = Slider(x, y, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT, 200, 2000, self.episode_length, "Episode Steps")
-        y += UI_SLIDER_HEIGHT + UI_PADDING
-        self.sliders["food"] = Slider(x, y, UI_SLIDER_WIDTH, UI_SLIDER_HEIGHT, 0.0, 0.1, self.food_spawn_rate, "Food Spawn")
-        y += UI_SLIDER_HEIGHT + UI_PADDING
-
-        # Species inputs
-        self.labels["pop_title"] = Label(x, y, "Initial Populations", WHITE, UI_FONT_SIZE)
-        y += 22
-        for species, val in self.initial_counts.items():
-            self.inputs[f"count_{species}"] = NumericInput(x, y, 80, 26, val, label=species.title(), min_val=0, max_val=400)
-            y += 32
-
-        # World inputs
-        y += UI_PADDING
-        self.labels["world"] = Label(x, y, "World", WHITE, UI_FONT_SIZE)
-        y += 22
-        self.inputs["world_w"] = NumericInput(x, y, 100, 26, self.world_width, label="Width", min_val=200, max_val=2000)
-        y += 32
-        self.inputs["world_h"] = NumericInput(x, y, 100, 26, self.world_height, label="Height", min_val=200, max_val=2000)
-        y += 32
-        self.buttons["obstacles"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Toggle Obstacles", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-
-        # Trait selector
-        self.labels["trait_label"] = Label(x, y, self._trait_label_text(), WHITE)
+        # --- Live Stats Group ---
+        # We'll render these dynamically in draw(), but let's place static labels
+        self.labels["stats_title"] = Label(self.rect.x + x_padding, y, "Live Stats", UI_TEXT_COLOR, UI_FONT_SIZE + 2)
+        y += 25
+        self.labels["generation"] = Label(self.rect.x + x_padding, y, "Generation: 1", UI_TEXT_COLOR)
         y += 20
-        self.buttons["trait_cycle"] = Button(x, y, UI_BUTTON_WIDTH + 40, UI_BUTTON_HEIGHT, "Next Trait", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-
-        # Event injection
-        self.labels["event_title"] = Label(x, y, "Manual Events", WHITE, UI_FONT_SIZE)
-        y += 22
-        self.buttons["ev_quake"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Arm Earthquake", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-        self.buttons["ev_tsunami"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Arm Tsunami", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-        self.buttons["ev_meteor"] = Button(x, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Arm Meteor", DARK_GRAY)
-        y += UI_BUTTON_HEIGHT + UI_PADDING
-        self.labels["event_hint"] = Label(x, y, "Click world to drop event", WHITE)
-
-        # Stats labels
-        self.labels["stats_title"] = Label(x, y, "Live Stats", WHITE, UI_FONT_SIZE)
-        y += 22
-        self.labels["generation"] = Label(x, y, "Generation: 1", WHITE)
+        self.labels["time_step"] = Label(self.rect.x + x_padding, y, "Step: 0", UI_TEXT_COLOR)
         y += 20
-        self.labels["time_step"] = Label(x, y, "Step: 0", WHITE)
+        self.labels["food_count"] = Label(self.rect.x + x_padding, y, "Food: 0", UI_TEXT_COLOR)
         y += 20
+        
+        # Population counts in a grid-like fashion
         self.labels["populations"] = {}
-        for species in self.initial_counts.keys():
-            self.labels["populations"][species] = Label(x, y, f"{species.title()}: 0", WHITE)
-            y += 18
-        self.labels["food_count"] = Label(x, y, "Food: 0", WHITE)
+        col_x = self.rect.x + x_padding
+        for i, species in enumerate(self.initial_counts.keys()):
+            self.labels["populations"][species] = Label(col_x, y, f"{species.title()}: 0", UI_TEXT_COLOR)
+            if i % 2 == 1:
+                y += 20
+                col_x = self.rect.x + x_padding
+            else:
+                col_x = self.rect.x + x_padding + 120
+        
+        if len(self.initial_counts) % 2 != 0:
+            y += 20
+
+        # Divider
+        y += 10
+        # self.dividers.append(y) # If we had a divider component
+        
+        # --- Controls ---
+        y += 10
+        self.buttons["pause"] = Button(self.rect.x + x_padding, y, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, "Pause", UI_PANEL_BG)
+        self.buttons["reset_gen"] = Button(self.rect.x + x_padding + UI_BUTTON_WIDTH + 10, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Reset Gen", UI_PANEL_BG)
+        y += UI_BUTTON_HEIGHT + 10
+        self.buttons["reset_all"] = Button(self.rect.x + x_padding, y, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT, "Reset All", UI_PANEL_BG)
+        self.buttons["export"] = Button(self.rect.x + x_padding + UI_BUTTON_WIDTH + 10, y, UI_BUTTON_WIDTH + 20, UI_BUTTON_HEIGHT, "Export Stats", UI_PANEL_BG)
+        y += UI_BUTTON_HEIGHT + 20
+
+        # --- Sliders ---
+        self.sliders["speed"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 0.1, 5.0, 1.0, "Sim Speed")
+        y += UI_SLIDER_HEIGHT + 25
+        self.sliders["mutation"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 0.01, 0.5, self.mutation_strength, "Mutation σ")
+        y += UI_SLIDER_HEIGHT + 25
+        self.sliders["episode"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 200, 2000, self.episode_length, "Episode Steps")
+        y += UI_SLIDER_HEIGHT + 25
+        self.sliders["food"] = Slider(self.rect.x + x_padding, y, UI_SLIDER_WIDTH + 80, UI_SLIDER_HEIGHT, 0.0, 0.1, self.food_spawn_rate, "Food Spawn")
+        y += UI_SLIDER_HEIGHT + 30
+
+        # --- Trait View ---
+        self.labels["trait_label"] = Label(self.rect.x + x_padding, y, self._trait_label_text(), UI_TEXT_COLOR)
+        y += 20
+        self.buttons["trait_cycle"] = Button(self.rect.x + x_padding, y, UI_BUTTON_WIDTH + 40, UI_BUTTON_HEIGHT, "Cycle Trait", UI_PANEL_BG)
+        y += UI_BUTTON_HEIGHT + 20
+
+        # --- Events ---
+        self.labels["event_title"] = Label(self.rect.x + x_padding, y, "God Mode (Events)", UI_TEXT_COLOR)
+        y += 25
+        btn_w = (self.rect.width - 40) // 3
+        self.buttons["ev_quake"] = Button(self.rect.x + x_padding, y, btn_w, UI_BUTTON_HEIGHT, "Quake", UI_PANEL_BG)
+        self.buttons["ev_tsunami"] = Button(self.rect.x + x_padding + btn_w + 5, y, btn_w, UI_BUTTON_HEIGHT, "Wave", UI_PANEL_BG)
+        self.buttons["ev_meteor"] = Button(self.rect.x + x_padding + (btn_w + 5) * 2, y, btn_w, UI_BUTTON_HEIGHT, "Meteor", UI_PANEL_BG)
+        y += UI_BUTTON_HEIGHT + 10
+        self.labels["event_hint"] = Label(self.rect.x + x_padding, y, "Click world to drop event", UI_TEXT_COLOR, 14)
+        y += 20
+
+        # --- World Config (Collapsible/Small) ---
+        self.buttons["obstacles"] = Button(self.rect.x + x_padding, y, UI_BUTTON_WIDTH + 40, UI_BUTTON_HEIGHT, "Toggle Obstacles", UI_PANEL_BG)
+        y += UI_BUTTON_HEIGHT + 20
+
+        # We skip population inputs for now to save space, or make them very compact if needed.
+        # But let's add them back compactly
+        self.labels["pop_title"] = Label(self.rect.x + x_padding, y, "Initial Config", UI_TEXT_COLOR)
+        y += 25
+        col_x = self.rect.x + x_padding
+        for i, (species, val) in enumerate(self.initial_counts.items()):
+            self.inputs[f"count_{species}"] = NumericInput(col_x, y, 70, 24, val, label=species[:3].title(), min_val=0, max_val=400)
+            if i % 3 == 2:
+                y += 45
+                col_x = self.rect.x + x_padding
+            else:
+                col_x += 85
+        
+        if len(self.initial_counts) % 3 != 0:
+            y += 45
+            
+        # World Dimensions
+        self.inputs["world_w"] = NumericInput(self.rect.x + x_padding, y, 80, 24, self.world_width, label="W", min_val=200, max_val=2000)
+        self.inputs["world_h"] = NumericInput(self.rect.x + x_padding + 90, y, 80, 24, self.world_height, label="H", min_val=200, max_val=2000)
+
 
     def handle_event(self, event):
         actions = {}
@@ -176,16 +211,20 @@ class ControlPanel:
             lbl.set_text(f"{species.title()}: {len(world.populations.get(species, []))}")
         self.labels["food_count"].set_text(f"Food: {len(world.food)}")
         if self.event_selection:
-            self.labels["event_hint"].set_text(f"Armed: {self.event_selection} (click world)")
+            self.labels["event_hint"].set_text(f"ARMED: {self.event_selection.upper()}!")
+            self.labels["event_hint"].color = UI_ACCENT_COLOR
         else:
             self.labels["event_hint"].set_text("Click world to drop event")
+            self.labels["event_hint"].color = UI_TEXT_COLOR
 
     def draw(self, surface):
         if not self.font:
             self.font = pygame.font.Font(None, UI_FONT_SIZE)
             self.title_font = pygame.font.Font(None, UI_TITLE_FONT_SIZE)
-        pygame.draw.rect(surface, BLACK, self.rect)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
+            
+        # Main background
+        pygame.draw.rect(surface, UI_BG_COLOR, self.rect)
+        pygame.draw.rect(surface, UI_BORDER_COLOR, self.rect, 2)
 
         for label in self.labels.values():
             if isinstance(label, dict):
@@ -194,6 +233,7 @@ class ControlPanel:
                 label.draw(surface, self.title_font)
             else:
                 label.draw(surface, self.font)
+                
         for lbl in self.labels.get("populations", {}).values():
             lbl.draw(surface, self.font)
 
@@ -209,7 +249,7 @@ class ControlPanel:
 
     def _trait_label_text(self):
         trait_name = self.get_selected_trait().replace("_", " ").title()
-        return f"Trait Graph: {trait_name}"
+        return f"Trait: {trait_name}"
 
     def get_config_overrides(self):
         counts = {k.split("_", 1)[1]: box.value for k, box in self.inputs.items() if k.startswith("count_")}

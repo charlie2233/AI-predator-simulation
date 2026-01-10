@@ -3,8 +3,9 @@ Main simulation runner with pygame interface and a front menu scene.
 Includes manual event injection via the control panel.
 """
 import os
-import pygame
 import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import pygame
 from simulation.world import World
 from simulation.ui.control_panel import ControlPanel
 from simulation.ui.visualization import PopulationGraph, TraitGraph, LogPanel
@@ -19,6 +20,10 @@ from simulation.config import (
     BLACK,
     WHITE,
     SPECIES_STYLE,
+    UI_BG_COLOR,
+    UI_TEXT_COLOR,
+    UI_BORDER_COLOR,
+    UI_PANEL_BG
 )
 
 
@@ -48,6 +53,8 @@ class Simulation:
         self.show_credits = False
         self.update_counter = 0
         self.pending_event_type = None
+        self.zoom = 0.6
+        self.camera_offset = [0, 0]
 
         cx = WORLD_WIDTH // 2 - 90
         cy = WORLD_HEIGHT // 2
@@ -73,7 +80,12 @@ class Simulation:
                 elif event.key == pygame.K_r and self.scene == "play":
                     self.world.reset_generation()
             elif event.type == pygame.MOUSEBUTTONDOWN and self.scene == "play":
-                self._handle_world_click(event)
+                if event.button == 1:
+                    self._handle_world_click(event)
+                elif event.button in (4, 5):  # scroll wheel
+                    self._handle_zoom(1 if event.button == 4 else -1)
+            elif event.type == pygame.MOUSEWHEEL and self.scene == "play":
+                self._handle_zoom(event.y)
 
             if self.scene == "menu":
                 self._handle_menu_event(event)
@@ -96,9 +108,12 @@ class Simulation:
 
     def _handle_world_click(self, event):
         x, y = event.pos
-        if x <= WORLD_WIDTH and y <= WORLD_HEIGHT and self.pending_event_type:
-            self.world.apply_manual_event(self.pending_event_type, (x, y))
-            self.log_panel.push(f"Manual event {self.pending_event_type} at ({x}, {y})")
+        # Adjust for zoom and offset
+        world_x = (x - self.camera_offset[0]) / self.zoom
+        world_y = (y - self.camera_offset[1]) / self.zoom
+        if world_x <= WORLD_WIDTH and world_y <= WORLD_HEIGHT and self.pending_event_type:
+            self.world.apply_manual_event(self.pending_event_type, (world_x, world_y))
+            self.log_panel.push(f"Manual event {self.pending_event_type} at ({int(world_x)}, {int(world_y)})")
             self.pending_event_type = None
 
     def update(self):
@@ -119,8 +134,8 @@ class Simulation:
         self.control_panel.update(self.world)
 
     def draw(self):
-        self.screen.fill(BLACK)
-        self.world_surface.fill(BLACK)
+        self.screen.fill(UI_BG_COLOR)
+        self.world_surface.fill(BLACK) # World stays black for contrast or can be UI_BG_COLOR
 
         for food in self.world.food:
             food.draw(self.world_surface)
@@ -131,8 +146,17 @@ class Simulation:
         for agent in self.world.get_all_agents():
             agent.draw(self.world_surface)
 
-        self.screen.blit(self.world_surface, (0, 0))
-        pygame.draw.rect(self.screen, WHITE, (0, 0, WORLD_WIDTH, WORLD_HEIGHT), 2)
+        scaled_surface = pygame.transform.smoothscale(
+            self.world_surface,
+            (int(WORLD_WIDTH * self.zoom), int(WORLD_HEIGHT * self.zoom)),
+        )
+        self.screen.blit(scaled_surface, self.camera_offset)
+        pygame.draw.rect(
+            self.screen,
+            UI_BORDER_COLOR,
+            (self.camera_offset[0], self.camera_offset[1], int(WORLD_WIDTH * self.zoom), int(WORLD_HEIGHT * self.zoom)),
+            2,
+        )
 
         self.control_panel.draw(self.screen)
         self.population_graph.draw(self.screen)
@@ -145,7 +169,7 @@ class Simulation:
             self._draw_event_overlay()
 
         fps_font = pygame.font.Font(None, 20)
-        fps_text = fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, WHITE)
+        fps_text = fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, UI_TEXT_COLOR)
         self.screen.blit(fps_text, (10, 10))
 
         pygame.display.flip()
@@ -206,6 +230,8 @@ class Simulation:
 
     def _start_new_world(self):
         self.world.reset_all(self.control_panel.get_config_overrides())
+        self.zoom = 0.6
+        self.camera_offset = [0, 0]
         self.scene = "play"
         self.paused = False
         self.started = True
@@ -213,15 +239,20 @@ class Simulation:
 
     def _draw_menu(self):
         overlay = pygame.Surface((WORLD_WIDTH, WORLD_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((10, 10, 25, 220))
+        # Dark semi-transparent overlay
+        overlay.fill((25, 25, 40, 230))
         title_font = pygame.font.Font(None, 52)
         text_font = pygame.font.Font(None, 24)
-        title = title_font.render("Evolving Animals Sandbox", True, WHITE)
-        subtitle = text_font.render("Start a new world or continue the current run.", True, WHITE)
+        
+        title = title_font.render("Evolving Animals Sandbox", True, UI_TEXT_COLOR)
+        subtitle = text_font.render("Start a new world or continue the current run.", True, UI_TEXT_COLOR)
+        
         overlay.blit(title, (WORLD_WIDTH // 2 - title.get_width() // 2, WORLD_HEIGHT // 2 - 140))
         overlay.blit(subtitle, (WORLD_WIDTH // 2 - subtitle.get_width() // 2, WORLD_HEIGHT // 2 - 110))
+        
         for btn in self.menu_buttons.values():
             btn.draw(overlay, text_font)
+            
         if self.show_credits:
             credits = [
                 "Credits",
@@ -230,15 +261,15 @@ class Simulation:
                 "Thanks for playing!",
             ]
             for i, line in enumerate(credits):
-                txt = text_font.render(line, True, WHITE)
+                txt = text_font.render(line, True, UI_TEXT_COLOR)
                 overlay.blit(txt, (WORLD_WIDTH // 2 - txt.get_width() // 2, WORLD_HEIGHT // 2 + 120 + i * 22))
         self.screen.blit(overlay, (0, 0))
 
     def _draw_event_overlay(self):
         overlay = pygame.Surface((WORLD_WIDTH, 40), pygame.SRCALPHA)
-        overlay.fill((20, 20, 20, 180))
+        overlay.fill((40, 42, 54, 200))
         font = pygame.font.Font(None, 24)
-        msg = font.render(f"Armed event: {self.pending_event_type} — click on the world to trigger", True, WHITE)
+        msg = font.render(f"Armed event: {self.pending_event_type} — click on the world to trigger", True, UI_TEXT_COLOR)
         overlay.blit(msg, (10, 10))
         self.screen.blit(overlay, (0, 0))
 

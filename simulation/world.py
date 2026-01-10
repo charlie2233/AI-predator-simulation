@@ -124,6 +124,7 @@ class World:
             for agent in list(agents):
                 if agent.alive:
                     agent.update(context)
+                    self._push_rocks(agent)
                     self._apply_obstacle_avoidance(agent)
                 else:
                     # Drop carcass
@@ -157,6 +158,23 @@ class World:
             x = random.uniform(0, self.width)
             y = random.uniform(0, self.height)
             self.food.append(Food(x, y))
+
+    def _push_rocks(self, agent):
+        """Allow agents to nudge rocks, making the world feel more interactive."""
+        if not self.rocks:
+            return
+        capacity = agent.dna.genes.get("carry_capacity", 8)
+        for rock in self.rocks:
+            if not getattr(rock, "alive", True):
+                continue
+            dist = agent.distance_to(rock)
+            if dist < rock.size + agent.size + 2:
+                # Nudge rock in agent's facing direction
+                dx = agent.velocity_x
+                dy = agent.velocity_y
+                step = capacity * 0.08
+                rock.x = max(0, min(self.width, rock.x + dx * step))
+                rock.y = max(0, min(self.height, rock.y + dy * step))
 
     def _respawn_rocks(self):
         if len(self.rocks) < ROCK_COUNT and random.random() < ROCK_RESPAWN_RATE:

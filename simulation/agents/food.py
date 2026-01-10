@@ -3,8 +3,7 @@ Food items for the simulation.
 """
 import pygame
 import random
-from simulation.config import FOOD_SIZE, FOOD_ENERGY_VALUE, GREEN
-
+from simulation.config import FOOD_SIZE, FOOD_ENERGY_VALUE, FOOD_COLOR, CARCASS_COLOR
 
 class Food:
     """Food item (plant or carcass)."""
@@ -36,5 +35,5 @@ class Food:
         if not self.alive:
             return
         
-        color = (150, 255, 150) if not self.is_carcass else (180, 140, 80)
+        color = FOOD_COLOR if not self.is_carcass else CARCASS_COLOR
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.size)

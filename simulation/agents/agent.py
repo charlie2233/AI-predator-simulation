@@ -228,7 +228,7 @@ class Agent:
         # Tiny face overlay (eyes + smile)
         eye_offset_x = max(2, size // 3)
         eye_offset_y = max(1, size // 4)
-        eye_radius = max(1, size // 5)
+        eye_radius = max(2, size // 4)
         eye_color = (255, 255, 255)
         pupil_color = (30, 30, 30)
         left_eye = (pos[0] - eye_offset_x, pos[1] - eye_offset_y)
@@ -239,4 +239,4 @@ class Agent:
         pygame.draw.circle(surface, pupil_color, right_eye, max(1, eye_radius // 2))
 
         smile_rect = pygame.Rect(pos[0] - size // 2, pos[1], size, size // 2)
-        pygame.draw.arc(surface, pupil_color, smile_rect, math.pi / 10, math.pi - math.pi / 10, 2)
+        pygame.draw.arc(surface, pupil_color, smile_rect, math.pi / 10, math.pi - math.pi / 10, 3)

@@ -8,7 +8,7 @@ from simulation.config import SHELTER_RADIUS, LIGHT_GRAY, DARK_GRAY
 class Rock:
     """Resource node that can be converted into a shelter."""
 
-    def __init__(self, x, y, size=6):
+    def __init__(self, x, y, size=8):
         self.x = x
         self.y = y
         self.size = size
@@ -17,7 +17,7 @@ class Rock:
     def draw(self, surface):
         if not self.alive:
             return
-        color = (120, 110, 100)
+        color = (150, 140, 130)
         pygame.draw.circle(surface, color, (int(self.x), int(self.y)), self.size)
 
 
