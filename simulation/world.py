@@ -38,6 +38,7 @@ from simulation.config import (
     DISASTER_RADIUS,
     SEA_COLOR,
     RIVER_COLOR,
+    CLAN_TRAITS,
 )
 
 
@@ -141,7 +142,12 @@ class World:
             dna = DNA(genes, dna_ranges)
         x = random.uniform(0, self.width)
         y = random.uniform(0, self.height)
-        clan = random.randint(0, 2)
+        clan = random.randint(0, len(CLAN_TRAITS) - 1)
+        # Apply clan multipliers to DNA for diversity
+        clan_mod = CLAN_TRAITS[clan]
+        for key, mult in clan_mod.items():
+            if key in dna.genes:
+                dna.genes[key] *= mult
         return klass(x, y, self.width, self.height, dna, species=species, clan=clan)
 
     def update(self):

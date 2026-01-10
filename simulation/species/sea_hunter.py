@@ -28,9 +28,11 @@ class SeaHunter(Agent):
                 speed_mult = 1.0 + 0.3 * swim_factor if in_water else 0.6
                 self.move_towards(target.x, target.y, speed_multiplier=speed_mult)
                 if self.distance_to(target) < (self.size + target.size):
-                    target.alive = False
-                    self.energy = min(self.max_energy, self.energy + 45)
-                    self.metrics["kills"] += 1
+                    dmg = self.dna.genes.get("attack_power", 32)
+                    target.take_damage(dmg)
+                    self.energy = min(self.max_energy, self.energy + 30)
+                    self.metrics["kills"] += 1 if not target.alive else 0
+                    self.metrics["damage_done"] += dmg
             else:
                 if in_water:
                     self.move()

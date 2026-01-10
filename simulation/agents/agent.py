@@ -73,6 +73,8 @@ class Agent:
             "energy_gained": 0,
             "stuns": 0,
             "attachments": 0,
+            "damage_done": 0,
+            "damage_taken": 0,
         }
 
     @property
@@ -220,6 +222,13 @@ class Agent:
         energy_cost = base_cost * (size_factor + speed_factor) * metabolism_factor / efficiency
         self.energy -= energy_cost
         return energy_cost
+
+    def take_damage(self, amount: float):
+        """Reduce energy as damage; flag metrics and death."""
+        self.energy -= amount
+        self.metrics["damage_taken"] += amount
+        if self.energy <= 0:
+            self.alive = False
 
     def clamp_position(self):
         """Keep within bounds."""

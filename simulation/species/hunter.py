@@ -29,10 +29,12 @@ class Hunter(Agent):
                 self.move_towards(target.x, target.y, speed_multiplier=speed_mult)
                 attack_range = self.dna.genes.get("attack_range", 6) + self.size
                 if self.distance_to(target) < attack_range and target.alive:
-                    target.alive = False
-                    self.energy = min(self.max_energy, self.energy + 45)
-                    self.metrics["kills"] += 1
-                    self.metrics["energy_gained"] += 45
+                    dmg = self.dna.genes.get("attack_power", 35)
+                    target.take_damage(dmg)
+                    self.energy = min(self.max_energy, self.energy + 30)
+                    self.metrics["kills"] += 1 if not target.alive else 0
+                    self.metrics["energy_gained"] += 30
+                    self.metrics["damage_done"] += dmg
             else:
                 if in_water and nearest_land:
                     self.move_towards(nearest_land[0], nearest_land[1], speed_multiplier=1.0)
